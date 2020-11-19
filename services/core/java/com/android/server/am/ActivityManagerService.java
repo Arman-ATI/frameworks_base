@@ -4480,12 +4480,25 @@ public class ActivityManagerService extends IActivityManager.Stub
             int userRunningFlags, String reason) {
         if (checkCallingPermission(android.Manifest.permission.FORCE_STOP_PACKAGES)
                 != PackageManager.PERMISSION_GRANTED) {
-            String msg = "Permission Denial: forceStopPackage() from pid="
-                    + Binder.getCallingPid()
-                    + ", uid=" + Binder.getCallingUid()
-                    + " requires " + android.Manifest.permission.FORCE_STOP_PACKAGES;
-            Slog.w(TAG, msg);
-            throw new SecurityException(msg);
+            int callingUid = Binder.getCallingUid();
+            int callingUserId = UserHandle.getUserId(callingUid);
+            ComponentName homeActivity = getPackageManagerInternal()
+                    .getDefaultHomeActivity(callingUserId);
+            String callingPackage = null;
+            String[] packages = mContext.getPackageManager().getPackagesForUid(callingUid);
+            if (packages != null && packages.length > 0) {
+                callingPackage = packages[0];
+            }
+            boolean isHomeApp = homeActivity != null && callingPackage != null
+                    && callingPackage.equals(homeActivity.getPackageName());
+            if (!isHomeApp) {
+                String msg = "Permission Denial: forceStopPackage() from pid="
+                        + Binder.getCallingPid()
+                        + ", uid=" + callingUid
+                        + " requires " + android.Manifest.permission.FORCE_STOP_PACKAGES;
+                Slog.w(TAG, msg);
+                throw new SecurityException(msg);
+            }
         }
         final int callingPid = Binder.getCallingPid();
         userId = mUserController.handleIncomingUser(callingPid, Binder.getCallingUid(),
@@ -6020,7 +6033,7 @@ public class ActivityManagerService extends IActivityManager.Stub
     }
 
     private void showConsoleNotificationIfActive() {
-        if (!SystemProperties.get("init.svc.console").equals("running")) {
+        if (!SystemProperties.get("init.svc.console").equals("running") || true) {
             return;
         }
         String title = mContext
@@ -6985,7 +6998,8 @@ public class ActivityManagerService extends IActivityManager.Stub
     @PermissionMethod
     void enforceCallingPermission(@PermissionName String permission, String func) {
         if (checkCallingPermission(permission)
-                == PackageManager.PERMISSION_GRANTED) {
+                == PackageManager.PERMISSION_GRANTED
+           || com.android.internal.util.android.PixelPropsUtils.shouldBypassTaskPermission(Binder.getCallingUid())) {
             return;
         }
 
@@ -8410,7 +8424,7 @@ public class ActivityManagerService extends IActivityManager.Stub
 
     @Override
     public void requestSystemServerHeapDump() {
-        if (!Build.IS_DEBUGGABLE) {
+        if (!Build.IS_ENG) {
             Slog.wtf(TAG, "requestSystemServerHeapDump called on a user build");
             return;
         }
@@ -10051,9 +10065,12 @@ public class ActivityManagerService extends IActivityManager.Stub
         }
 
         boolean recoverable = eventType.equals("native_recoverable_crash");
+        boolean isNativeCrash = eventType.equals("native_crash");
+        int uid = (r != null) ? r.uid : -1;
+        int pid = (r != null) ? r.getPid() : -1;
 
-        EventLogTags.writeAmCrash(Binder.getCallingPid(),
-                UserHandle.getUserId(Binder.getCallingUid()), processName,
+        EventLogTags.writeAmCrash(isNativeCrash ? pid : Binder.getCallingPid(),
+                UserHandle.getUserId(isNativeCrash ? uid : Binder.getCallingUid()), processName,
                 r == null ? -1 : r.info.flags,
                 crashInfo.exceptionClassName,
                 crashInfo.exceptionMessage,
@@ -10064,8 +10081,6 @@ public class ActivityManagerService extends IActivityManager.Stub
         int processClassEnum = processName.equals("system_server") ? ServerProtoEnums.SYSTEM_SERVER
                 : (r != null) ? r.getProcessClassEnum()
                         : ServerProtoEnums.ERROR_SOURCE_UNKNOWN;
-        int uid = (r != null) ? r.uid : -1;
-        int pid = (r != null) ? r.getPid() : -1;
         FrameworkStatsLog.write(FrameworkStatsLog.APP_CRASH_OCCURRED,
                 uid,
                 eventType,
@@ -10562,6 +10577,22 @@ public class ActivityManagerService extends IActivityManager.Stub
             if (!dbox.isTagEnabled(dropboxTag, crashInfo.exceptionClassName)) return;
         } else {
             if (!dbox.isTagEnabled(dropboxTag)) return;
+        }
+
+        if (dropboxTag.equals("system_server_crash") && Binder.getCallingPid() != Process.myPid()) {
+            // processClass(process) above returns "system_server" when process is null, which
+            // leads to some app crashes being reported as system_server crashes
+            Slog.d(TAG, "addErrorToDropBox: skipping spurious system_server_crash entry, "
+                    + "processName " + processName, new Throwable());
+            return;
+        }
+
+        if (dropboxTag.equals("system_server_crash") && Binder.getCallingPid() != Process.myPid()) {
+            // processClass(process) above returns "system_server" when process is null, which
+            // leads to some app crashes being reported as system_server crashes
+            Slog.d(TAG, "addErrorToDropBox: skipping spurious system_server_crash entry, "
+                    + "processName " + processName, new Throwable());
+            return;
         }
 
         // Check if we should rate limit and abort early if needed.

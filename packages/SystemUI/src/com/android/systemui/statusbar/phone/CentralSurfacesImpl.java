@@ -192,6 +192,7 @@ import com.android.systemui.statusbar.notification.stack.NotificationStackScroll
 import com.android.systemui.statusbar.notification.stack.NotificationStackScrollLayoutController;
 import com.android.systemui.statusbar.phone.dagger.StatusBarPhoneModule;
 import com.android.systemui.statusbar.policy.BatteryController;
+import com.android.systemui.statusbar.policy.BurnInProtectionController;
 import com.android.systemui.statusbar.policy.ConfigurationController;
 import com.android.systemui.statusbar.policy.ConfigurationController.ConfigurationListener;
 import com.android.systemui.statusbar.policy.DeviceProvisionedController;
@@ -515,6 +516,8 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces {
 
     private final QuickAccessWalletController mWalletController;
 
+    private final BurnInProtectionController mBurnInProtectionController;
+
     /**
      * Public constructor for CentralSurfaces.
      *
@@ -624,7 +627,8 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces {
             SessionTracker sessionTracker,
             MediaViewController mediaViewController,
             PulseViewController pulseViewController,
-            EdgeLightViewController edgeLightViewController
+           EdgeLightViewController edgeLightViewController,
+            BurnInProtectionController burnInProtectionController
     ) {
         mContext = context;
         mNotificationsController = notificationsController;
@@ -721,6 +725,7 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces {
         mDreamManager = dreamManager;
         lockscreenShadeTransitionController.setCentralSurfaces(this);
         mScreenOffAnimationController = screenOffAnimationController;
+        mBurnInProtectionController = burnInProtectionController;
 
         ShadeExpansionListener shadeExpansionListener = this::onPanelExpansionChanged;
         ShadeExpansionChangeEvent currentState =
@@ -993,6 +998,7 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces {
         ShadeExpansionChangeEvent currentState =
                 mShadeExpansionStateManager.addExpansionListener(mWakeUpCoordinator);
         mWakeUpCoordinator.onPanelExpansionChanged(currentState);
+        mBurnInProtectionController.setPhoneStatusBarView(mPhoneStatusBarViewController.getPhoneStatusBarView());
 
         mShadeTouchableRegionManager.setup(getNotificationShadeWindowView());
 
@@ -2129,6 +2135,8 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces {
 
             updateNotificationPanelTouchState();
             getNotificationShadeWindowViewController().cancelCurrentTouch();
+
+            mBurnInProtectionController.stopShiftTimer();
             if (mLaunchCameraOnFinishedGoingToSleep) {
                 mLaunchCameraOnFinishedGoingToSleep = false;
 
@@ -2263,6 +2271,7 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces {
                 }
             }
             updateScrimController();
+            mBurnInProtectionController.startShiftTimer();
         }
     };
 

@@ -63,6 +63,8 @@ import android.graphics.Shader;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.os.Trace;
+import android.os.UserHandle;
+import android.provider.Settings;
 import android.util.AttributeSet;
 import android.util.IndentingPrintWriter;
 import android.util.Log;
@@ -1004,7 +1006,11 @@ public class NotificationStackScrollLayout
                 return;
             }
 
-            if (mScrollViewFields.alignToInnerQqsTiles) {
+            boolean smallLandscapeNotifications = Settings.System.getIntForUser(
+                    mContext.getContentResolver(),
+                    Settings.System.SMALL_LANDSCAPE_NOTIFICATION, 0,
+                    UserHandle.USER_CURRENT) == 1;
+            if (mScrollViewFields.alignToInnerQqsTiles && smallLandscapeNotifications) {
                 final int innerWidth = viewWidth - mSidePaddings * 2;
                 mSidePaddings += calculateExtraSidePaddingToAlignToTile(innerWidth);
             }
@@ -1024,8 +1030,14 @@ public class NotificationStackScrollLayout
                 return;
             }
 
-            final int innerWidth = viewWidth - mMinimumPaddings * 2;
-            mSidePaddings = mMinimumPaddings + calculateExtraSidePaddingToAlignToTile(innerWidth);
+            boolean smallLandscapeNotifications = Settings.System.getIntForUser(
+                    mContext.getContentResolver(),
+                    Settings.System.SMALL_LANDSCAPE_NOTIFICATION, 0,
+                    UserHandle.USER_CURRENT) == 1;
+            if (smallLandscapeNotifications) {
+                final int innerWidth = viewWidth - mMinimumPaddings * 2;
+                mSidePaddings = mMinimumPaddings + calculateExtraSidePaddingToAlignToTile(innerWidth);
+            }
         }
     }
 
@@ -1045,6 +1057,7 @@ public class NotificationStackScrollLayout
     @VisibleForTesting
     int getSidePaddings() {
         return mSidePaddings;
+    }
     }
 
     void updateCornerRadius() {

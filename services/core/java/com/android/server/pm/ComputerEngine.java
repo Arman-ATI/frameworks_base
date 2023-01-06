@@ -5494,9 +5494,10 @@ public class ComputerEngine implements Computer {
                 && (AURORA_STORE.equals(installerPackageName)
                 || AURORA_SERVICES.equals(installerPackageName))) {
             return InstallSource.create(PLAY_STORE, PLAY_STORE, PLAY_STORE,
-                            installSource.mInstallerPackageUid, // FIXME: likely wrong
-            		    installSource.mUpdateOwnerPackageName,
-            		    installSource.mInstallerAttributionTag,
+                            installSource.mInstallerPackageUid,
+                            installSource.mOriginalInstallerUid,
+                            installSource.mUpdateOwnerPackageName,
+                            installSource.mInstallerAttributionTag,
                             PackageInstaller.PACKAGE_SOURCE_STORE)
                     .setInitiatingPackageSignatures(new PackageSignatures(
                             mSettings.getPackage(PLAY_STORE).getSigningDetails()));

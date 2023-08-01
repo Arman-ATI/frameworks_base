@@ -349,5 +349,8 @@ public class SecureSettings {
         Settings.Secure.LIGHT_ANIMATION_FAVORITE_CALLS_ENABLED,
         Settings.Secure.IME_SWITCHER_BUTTON_IN_NAVBAR_ENABLED,
         Settings.Secure.RAISE_TRIGGER_DEFAULT_ASSISTANT,
+        Settings.Secure.DOZE_DOUBLE_TAP_GESTURE_VIBRATE,
+        Settings.Secure.DOZE_TAP_GESTURE_VIBRATE,
+        Settings.Secure.DOZE_PICK_UP_GESTURE_VIBRATE,
     };
 }

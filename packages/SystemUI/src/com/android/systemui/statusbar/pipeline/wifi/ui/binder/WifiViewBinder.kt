@@ -32,6 +32,7 @@ import com.android.systemui.statusbar.connectivity.ThemeIconController
 import com.android.systemui.statusbar.StatusBarIconView.STATE_HIDDEN
 import com.android.systemui.statusbar.pipeline.shared.ui.binder.ModernStatusBarViewBinding
 import com.android.systemui.statusbar.pipeline.shared.ui.binder.ModernStatusBarViewVisibilityHelper
+import com.android.systemui.statusbar.pipeline.wifi.ui.model.VoWifiIcon
 import com.android.systemui.statusbar.pipeline.wifi.ui.model.WifiIcon
 import com.android.systemui.statusbar.WifiStandardImageView
 import com.android.systemui.statusbar.WifiStandardViewController
@@ -67,6 +68,8 @@ object WifiViewBinder {
         val activityContainerView = view.requireViewById<View>(R.id.inout_container)
         val wifiStandardView = view.requireViewById<WifiStandardImageView>(R.id.wifi_standard)
         wifiStandardView.setFactory(wifiStandardFactory)
+        val voWifiView = view.requireViewById<ImageView>(R.id.vowifi)
+        val wifiStandardView = view.requireViewById<ImageView>(R.id.wifi_standard)
 
         view.isVisible = true
         iconView.isVisible = true
@@ -142,6 +145,7 @@ object WifiViewBinder {
                         iconView.imageTintList = tintList
                         activityInView.imageTintList = tintList
                         activityOutView.imageTintList = tintList
+                        voWifiView.imageTintList = tintList
                         wifiStandardView.imageTintList = tintList
                         dotView.setDecorColor(tint)
                     }
@@ -164,6 +168,15 @@ object WifiViewBinder {
                 launch {
                     viewModel.isActivityContainerVisible.distinctUntilChanged().collect { visible ->
                         activityContainerView.isVisible = visible
+                    }
+                }
+
+                launch {
+                    viewModel.voWifiIcon.distinctUntilChanged().collect { voWifiIcon ->
+                        voWifiView.isVisible = voWifiIcon is VoWifiIcon.Visible
+                        if (voWifiIcon is VoWifiIcon.Visible) {
+                            IconViewBinder.bind(voWifiIcon.icon, voWifiView)
+                        }
                     }
                 }
 

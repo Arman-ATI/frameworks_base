@@ -115,6 +115,7 @@ import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.graphics.drawable.BackgroundBlurDrawable;
 import com.android.internal.jank.InteractionJankMonitor;
+import com.android.internal.util.evolution.VibrationUtils;
 import com.android.internal.view.RotationPolicy;
 import com.android.settingslib.Utils;
 import com.android.systemui.Dumpable;
@@ -2637,6 +2638,9 @@ public class VolumeDialogImpl implements VolumeDialog, Dumpable,
                             userLevel);
                 }
             }
+            int vibrateIntensity = Settings.System.getInt(mContext.getContentResolver(),
+                        Settings.System.VOLUME_SLIDER_HAPTICS_INTENSITY, 1);
+            VibrationUtils.triggerVibration(mContext, vibrateIntensity);
         }
 
         @Override

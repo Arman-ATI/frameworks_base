@@ -164,6 +164,9 @@
         <item quantity="other">%d devices connected</item>
     </plurals>
 
+    <!-- Clock Weather -->
+    <string name="clock_ide_weather_data_unavailable">null</string>
+
     <!-- Weather -->
     <string name="weather_condition_clouds">Cloudy</string>
     <string name="weather_condition_rain">Rainy</string>

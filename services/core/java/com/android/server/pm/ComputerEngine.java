@@ -166,6 +166,8 @@ import com.android.server.utils.WatchedSparseBooleanArray;
 import com.android.server.utils.WatchedSparseIntArray;
 import com.android.server.wm.ActivityTaskManagerInternal;
 
+import org.rising.server.QuickSwitchService;
+
 import libcore.util.EmptyArray;
 
 import java.io.BufferedOutputStream;
@@ -997,6 +999,8 @@ public class ComputerEngine implements Computer {
 
     public final ApplicationInfo getApplicationInfo(String packageName,
             @PackageManager.ApplicationInfoFlagsBits long flags, int userId) {
+        if (QuickSwitchService.shouldHide(userId, packageName))
+            return null;
         return getApplicationInfoInternal(packageName, flags, Binder.getCallingUid(), userId);
     }
 
@@ -1010,6 +1014,8 @@ public class ComputerEngine implements Computer {
             @PackageManager.ApplicationInfoFlagsBits long flags,
             int filterCallingUid, int userId) {
         if (!mUserManager.exists(userId)) return null;
+        if (QuickSwitchService.shouldHide(userId, packageName))
+            return null;
         flags = updateFlagsForApplication(flags, userId);
 
         if (!isRecentsAccessingChildProfiles(Binder.getCallingUid(), userId)) {
@@ -1659,6 +1665,8 @@ public class ComputerEngine implements Computer {
 
     public final PackageInfo getPackageInfo(String packageName,
             @PackageManager.PackageInfoFlagsBits long flags, int userId) {
+        if (QuickSwitchService.shouldHide(userId, packageName))
+            return null;
         return getPackageInfoInternal(packageName, PackageManager.VERSION_CODE_HIGHEST,
                 flags, Binder.getCallingUid(), userId);
     }
@@ -1785,7 +1793,8 @@ public class ComputerEngine implements Computer {
         Slog.i(TAG, "getInstalledPackages: callingUid=" + callingUid + " flags=" + flags
                + " updatedFlags=" + updatedFlags + " userId=" + userId);
 
-        return getInstalledPackagesBody(updatedFlags, userId, callingUid);
+        return QuickSwitchService.recreatePackageList(callingUid, mContext,
+                        userId, getInstalledPackagesBody(flags, userId, callingUid));
     }
 
     private PackageInfoList getInstalledPackagesBody(long flags, int userId, int callingUid) {
@@ -4845,7 +4854,7 @@ public class ComputerEngine implements Computer {
             }
         }
 
-        return list;
+        return QuickSwitchService.recreateApplicationList(callingUid, mContext, userId, list);
     }
 
     @Nullable

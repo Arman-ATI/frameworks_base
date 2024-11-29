@@ -98,6 +98,9 @@ public class NotificationListener extends NotificationListenerWithPlugins implem
     }
 
     public void removeNotificationHandler(NotificationHandler handler) {
+        if (!mNotificationHandlers.contains(handler)) {
+            return;
+        }
         mNotificationHandlers.remove(handler);
     }
 

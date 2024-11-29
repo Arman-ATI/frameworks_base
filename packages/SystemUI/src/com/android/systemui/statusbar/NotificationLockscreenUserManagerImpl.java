@@ -119,6 +119,8 @@ public class NotificationLockscreenUserManagerImpl implements
 
     private static final Uri SHOW_LOCKSCREEN =
             Settings.Secure.getUriFor(LOCK_SCREEN_SHOW_NOTIFICATIONS);
+    private static final Uri PEEK_DISPLAY =
+            Settings.Secure.getUriFor("peek_display_notifications");
     private static final Uri SHOW_PRIVATE_LOCKSCREEN =
             Settings.Secure.getUriFor(LOCK_SCREEN_ALLOW_PRIVATE_NOTIFICATIONS);
     private static final Uri REDACT_OTP_ON_WIFI =
@@ -369,6 +371,7 @@ public class NotificationLockscreenUserManagerImpl implements
         mLockScreenUris.add(SHOW_PRIVATE_LOCKSCREEN);
         mLockScreenUris.add(REDACT_OTP_ON_WIFI);
         mLockScreenUris.add(OTP_REDACTION_LOCK_TIME);
+        mLockScreenUris.add(PEEK_DISPLAY);
 
         dumpManager.registerDumpable(this);
 
@@ -428,7 +431,7 @@ public class NotificationLockscreenUserManagerImpl implements
                     int flags, UserHandle user) {
                 boolean changed = false;
                 for (Uri uri: uris) {
-                    if (SHOW_LOCKSCREEN.equals(uri)) {
+                    if (SHOW_LOCKSCREEN.equals(uri) || PEEK_DISPLAY.equals(uri)) {
                         changed |= updateUserShowSettings(user.getIdentifier());
                     } else if (SHOW_PRIVATE_LOCKSCREEN.equals(uri)) {
                         changed |= updateUserShowPrivateSettings(user.getIdentifier());
@@ -461,6 +464,11 @@ public class NotificationLockscreenUserManagerImpl implements
 
         mContext.getContentResolver().registerContentObserver(
                 SHOW_LOCKSCREEN, false,
+                mLockscreenSettingsObserver,
+                USER_ALL);
+                
+        mContext.getContentResolver().registerContentObserver(
+                PEEK_DISPLAY, false,
                 mLockscreenSettingsObserver,
                 USER_ALL);
 
@@ -581,10 +589,14 @@ public class NotificationLockscreenUserManagerImpl implements
     @WorkerThread
     private boolean updateUserShowSettings(int userId) {
         boolean originalAllowLockscreen = mUsersUsersAllowingNotifications.get(userId);
+        boolean peekDisplayEnabled = mSecureSettings.getIntForUser(
+                "peek_display_notifications",
+                0,
+                userId) != 0;
         boolean newAllowLockscreen = mSecureSettings.getIntForUser(
                 LOCK_SCREEN_SHOW_NOTIFICATIONS,
                 1,
-                userId) != 0;
+                userId) != 0 && !peekDisplayEnabled;
         mUsersUsersAllowingNotifications.put(userId, newAllowLockscreen);
 
         return (newAllowLockscreen != originalAllowLockscreen);

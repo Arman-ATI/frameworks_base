@@ -16,6 +16,7 @@
 
 package com.android.systemui.util
 
+import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.service.notification.StatusBarNotification
@@ -25,13 +26,17 @@ import com.android.systemui.dump.DumpManager
 import com.android.systemui.Dumpable
 import com.android.systemui.statusbar.StatusBarState.KEYGUARD
 import com.android.systemui.statusbar.StatusBarState.SHADE_LOCKED
+import com.android.systemui.statusbar.phone.ScrimController
 import javax.inject.Inject
 import java.io.PrintWriter
 import java.util.concurrent.atomic.AtomicBoolean
 
 /* Scrim - aka testing utils */
 @SysUISingleton
-class ScrimUtils @Inject constructor(dumpManager: DumpManager) : Dumpable {
+class ScrimUtils @Inject constructor(
+    private val context: Context,
+    dumpManager: DumpManager
+) : Dumpable {
 
     interface ScrimEventListener {
         fun onKeyguardShowingChanged(showing: Boolean) {}
@@ -63,13 +68,32 @@ class ScrimUtils @Inject constructor(dumpManager: DumpManager) : Dumpable {
 
     private var keyguardRetryRunnable: Runnable? = null
 
+    private val mScrimController: ScrimController? by lazy {
+        try {
+            Dependency.get(ScrimController::class.java)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     companion object {
+        @Volatile
+        private var instance: ScrimUtils? = null
+
         @JvmStatic
         fun get(): ScrimUtils = Dependency.get(ScrimUtils::class.java)
+
+        @JvmStatic
+        fun getInstance(context: Context): ScrimUtils {
+            return instance ?: synchronized(this) {
+                instance ?: get().also { instance = it }
+            }
+        }
     }
 
     init {
         dumpManager.registerNormalDumpable("ScrimUtils", this)
+        instance = this
     }
 
     fun addListener(listener: ScrimEventListener) = listeners.addListener(listener)
@@ -168,6 +192,11 @@ class ScrimUtils @Inject constructor(dumpManager: DumpManager) : Dumpable {
         } else {
             (mExpandedFraction ?: 0.0f) <= 0.0f
         }
+
+    fun setQsExpansion(expansion: Float) {
+        val visible = expansion >= 1.0f
+        setQsVisible(visible)
+    }
 
     // adb shell dumpsys activity service com.android.systemui | grep "ScrimUtils states:" -A10
     override fun dump(pw: PrintWriter, args: Array<String>) {

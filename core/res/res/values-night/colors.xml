@@ -72,4 +72,6 @@
     <color name="system_secondary_fixed_dim">@color/system_secondary_fixed_dim_dark</color>
     <color name="system_tertiary_fixed">@color/system_tertiary_fixed_dark</color>
     <color name="system_tertiary_fixed_dim">@color/system_tertiary_fixed_dim_dark</color>
+    
+    <color name="toast_color_background">@*android:color/system_neutral1_900</color>
 </resources>

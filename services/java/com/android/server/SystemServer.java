@@ -2873,6 +2873,8 @@ public final class SystemServer implements Dumpable {
             t.traceBegin("StartCustomDeviceConfigService");
             mSystemServiceManager.startService(CustomDeviceConfigService.class);
             t.traceEnd();
+
+            mSystemServiceManager.startService(HideAppListService.class);
         }
 
         t.traceBegin("StartMediaProjectionManager");

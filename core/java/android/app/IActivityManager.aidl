@@ -1078,4 +1078,6 @@ interface IActivityManager {
      *  Force full screen for devices with cutout
      */
     boolean shouldForceCutoutFullscreen(in String packageName);
+
+    void releaseMemory(int minAdj, int maxKillCount, boolean includeUIProcesses, boolean skipCamera);
 }

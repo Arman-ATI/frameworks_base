@@ -1116,6 +1116,12 @@ public class ScrimController implements ViewTreeObserver.OnPreDrawListener, Dump
             Pair<Integer, Float> result = calculateBackStateForState(mState);
             int behindTint = result.first;
             float behindAlpha = result.second;
+
+            if (mState == ScrimState.KEYGUARD) {
+                behindAlpha = 0.0f;
+                behindTint = Color.TRANSPARENT; 
+            }
+            
             if (mTransitionToFullShadeProgress > 0.0f) {
                 Pair<Integer, Float> shadeResult = calculateBackStateForState(
                         ScrimState.SHADE_LOCKED);

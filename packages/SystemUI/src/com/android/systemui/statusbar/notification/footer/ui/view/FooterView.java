@@ -34,6 +34,8 @@ import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.Drawable;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.util.AttributeSet;
 import android.util.IndentingPrintWriter;
 import android.view.View;
@@ -74,8 +76,14 @@ public class FooterView extends StackScrollerDecorView {
 
     private OnClickListener mClearAllButtonClickListener;
 
+    private static final VibrationEffect EFFECT_CLICK =
+            VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK);
+
+    private final Vibrator mVibrator;
+
     public FooterView(Context context, AttributeSet attrs) {
         super(context, attrs);
+        mVibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
     }
 
     @Override
@@ -255,19 +263,26 @@ public class FooterView extends StackScrollerDecorView {
 
     /** Set onClickListener for the notification settings button. */
     public void setSettingsButtonClickListener(OnClickListener listener) {
-        mSettingsButton.setOnClickListener(listener);
+        mSettingsButton.setOnClickListener(withHaptics(listener));
     }
 
     /** Set onClickListener for the notification history button. */
     public void setHistoryButtonClickListener(OnClickListener listener) {
-        mHistoryButton.setOnClickListener(listener);
+        mHistoryButton.setOnClickListener(withHaptics(listener));
     }
 
     /** Set onClickListener for the clear all (end) button. */
     public void setClearAllButtonClickListener(OnClickListener listener) {
         if (mClearAllButtonClickListener == listener) return;
         mClearAllButtonClickListener = listener;
-        mClearAllButton.setOnClickListener(listener);
+        mClearAllButton.setOnClickListener(withHaptics(listener));
+    }
+
+    private OnClickListener withHaptics(OnClickListener listener) {
+        return v -> {
+            mVibrator.vibrate(EFFECT_CLICK);
+            if (listener != null) listener.onClick(v);
+        };
     }
 
     /**

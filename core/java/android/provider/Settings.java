@@ -14371,6 +14371,7 @@ public final class Settings {
          *
          * @hide
          */
+        @Readable
         public static final String CHARGE_OPTIMIZATION_MODE = "charge_optimization_mode";
 
         /**

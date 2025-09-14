@@ -73,6 +73,7 @@ import android.os.SystemClock;
 import android.os.UserHandle;
 import android.os.UserManager;
 import android.provider.DeviceConfig;
+import android.provider.Settings;
 import android.text.TextUtils;
 import android.text.format.Formatter;
 import android.util.Pair;
@@ -1256,7 +1257,9 @@ public class KeyguardIndicationController {
             return mContext.getResources().getString(R.string.keyguard_plugged_in, percentage);
         }
 
-        final boolean hasChargingTime = mChargingTimeRemaining > 0;
+        final boolean chargingTimeEnabled = Settings.System.getIntForUser(mContext.getContentResolver(),
+                Settings.System.LOCKSCREEN_CHARGING_TIME, 1, UserHandle.USER_CURRENT) == 1;
+        final boolean hasChargingTime = mChargingTimeRemaining > 0 && chargingTimeEnabled;
         int chargingId;
         if (mPowerPluggedInWired) {
             switch (mChargingSpeed) {

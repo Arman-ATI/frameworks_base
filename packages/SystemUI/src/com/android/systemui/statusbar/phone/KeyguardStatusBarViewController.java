@@ -513,6 +513,11 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
                 false,
                 mVolumeSettingObserver,
                 UserHandle.USER_ALL);
+        mSecureSettings.registerContentObserverForUserSync(
+                Settings.System.TINT_STATUSBAR_ICONS_WITH_ACCENT,
+                false,
+                mAccentColorSettingObserver,
+                UserHandle.USER_ALL);
         mTunerService.addTunable(this, STATUSBAR_EXTRA_PADDING_START);
         mTunerService.addTunable(this, STATUSBAR_EXTRA_PADDING_TOP);
         mTunerService.addTunable(this, STATUSBAR_EXTRA_PADDING_END);
@@ -569,6 +574,7 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
         mKeyguardUpdateMonitor.removeCallback(mKeyguardUpdateMonitorCallback);
         mDisableStateTracker.stopTracking(mCommandQueue);
         mSecureSettings.unregisterContentObserverAsync(mVolumeSettingObserver);
+        mSecureSettings.unregisterContentObserverSync(mAccentColorSettingObserver);
         if (mTintedIconManager != null) {
             mStatusBarIconController.removeIconGroup(mTintedIconManager);
         }
@@ -860,6 +866,14 @@ public class KeyguardStatusBarViewController extends ViewController<KeyguardStat
         @Override
         public void onChange(boolean selfChange) {
             updateBlockedIcons();
+        }
+    };
+
+    private final ContentObserver mAccentColorSettingObserver = new ContentObserver(null) {
+        @Override
+        public void onChange(boolean selfChange) {
+            // Re-apply icon colors when accent color setting changes
+            onThemeChanged();
         }
     };
 

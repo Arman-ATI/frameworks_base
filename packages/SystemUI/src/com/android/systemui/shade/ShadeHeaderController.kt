@@ -371,6 +371,8 @@ constructor(
 
         iconManager = tintedIconManagerFactory.create(iconContainer, StatusBarLocation.QS)
         iconManager.setTint(fgColor, bgColor)
+        iconContainer.setIsUsingQs(true)
+        iconContainer.setNetworkTrafficColor(fgColor)
 
         if (!NewStatusBarIcons.isEnabled) {
             batteryMeterViewController.init()
@@ -491,6 +493,8 @@ constructor(
         systemIconsHoverContainer.setOnHoverListener(
             statusOverlayHoverListenerFactory.createListener(systemIconsHoverContainer)
         )
+
+        iconContainer.setIsUsingQs(true)
     }
 
     override fun onViewDetached() {
@@ -502,6 +506,7 @@ constructor(
         statusBarIconController.removeIconGroup(iconManager)
         nextAlarmController.removeCallback(nextAlarmCallback)
         systemIconsHoverContainer.setOnHoverListener(null)
+        iconContainer.setIsUsingQs(false)
     }
 
     fun disable(state1: Int, state2: Int, animate: Boolean) {

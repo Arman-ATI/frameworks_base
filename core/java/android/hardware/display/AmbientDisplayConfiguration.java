@@ -174,11 +174,10 @@ public class AmbientDisplayConfiguration {
         boolean isScreenOffUnlockEnabled = mScreenOffUdfpsAvailable && Flags.screenOffUnlockUdfps();
         if (!isScreenOffUnlockEnabled) {
             return false;
-        } else {
-            return boolSetting(SCREEN_OFF_UNLOCK_UDFPS_ENABLED, user,
-                    mContext.getResources().getBoolean(R.bool.config_screen_off_udfps_default_on)
-                            ? 1 : 0);
         }
+        return mContext.getResources().getBoolean(R.bool.config_screen_off_udfps_default_on)
+                ? boolSettingDefaultOn(SCREEN_OFF_UNLOCK_UDFPS_ENABLED, user)
+                : boolSettingDefaultOff(SCREEN_OFF_UNLOCK_UDFPS_ENABLED, user);
     }
 
     /** @hide */

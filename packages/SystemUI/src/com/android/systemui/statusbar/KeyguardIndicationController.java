@@ -73,7 +73,6 @@ import android.os.SystemClock;
 import android.os.UserHandle;
 import android.os.UserManager;
 import android.provider.DeviceConfig;
-import android.provider.Settings;
 import android.text.TextUtils;
 import android.text.format.Formatter;
 import android.util.Pair;
@@ -229,13 +228,10 @@ public class KeyguardIndicationController {
     private boolean mEnableBatteryDefender;
     private boolean mBatteryDead;
     private boolean mIncompatibleCharger;
-    private float mChargingWattage;
+    private int mChargingWattage;
     private int mBatteryLevel = -1;
     private boolean mBatteryPresent = true;
     protected long mChargingTimeRemaining;
-    private float mChargingCurrent;
-    private float mChargingVoltage;
-    private float mTemperature;
     private Pair<String, BiometricSourceType> mBiometricErrorMessageToShowOnScreenOn;
     private Set<Integer> mCoExFaceAcquisitionMsgIdsToShow;
     private final FaceHelpMessageDeferral mFaceAcquiredMessageDeferral;
@@ -1313,41 +1309,13 @@ public class KeyguardIndicationController {
                     : R.string.keyguard_plugged_in;
         }
 
-        String batteryInfo = "";
-        boolean showbatteryInfo = Settings.System.getIntForUser(mContext.getContentResolver(),
-            Settings.System.LOCKSCREEN_BATTERY_INFO, 1, UserHandle.USER_CURRENT) == 1;
-         if (showbatteryInfo) {
-            if (mChargingCurrent >= mCurrentDivider * 1000) {
-                batteryInfo = String.format("%.1f" , (mChargingCurrent / mCurrentDivider / 1000)) + "A";
-            } else if (mChargingCurrent > 0) {
-                batteryInfo = String.format("%.0f" , (mChargingCurrent / mCurrentDivider)) + "mA";
-            }
-            if (mChargingWattage > 0) {
-                batteryInfo = (batteryInfo == "" ? "" : batteryInfo + " · ") +
-                        String.format("%.1f" , (mChargingWattage / mCurrentDivider / 1000)) + "W";
-            }
-            if (mChargingVoltage > 0) {
-                batteryInfo = (batteryInfo == "" ? "" : batteryInfo + " · ") +
-                        String.format("%.1f", (mChargingVoltage / 1000 / 1000)) + "V";
-            }
-            if (mTemperature > 0) {
-                batteryInfo = (batteryInfo == "" ? "" : batteryInfo + " · ") +
-                        String.format("%.1f", (mTemperature / 10)) + "°C";
-            }
-            if (batteryInfo != "") {
-                batteryInfo = "\n" + batteryInfo;
-            }
-        }
-
         if (hasChargingTime) {
             String chargingTimeFormatted = Formatter.formatShortElapsedTimeRoundingUpToMinutes(
                     mContext, mChargingTimeRemaining);
-            String chargingText = mContext.getResources().getString(chargingId, chargingTimeFormatted,
+            return mContext.getResources().getString(chargingId, chargingTimeFormatted,
                     percentage);
-            return chargingText + batteryInfo;
         } else {
-            String chargingText =  mContext.getResources().getString(chargingId, percentage);
-            return chargingText + batteryInfo;
+            return mContext.getResources().getString(chargingId, percentage);
         }
     }
 
@@ -1508,14 +1476,11 @@ public class KeyguardIndicationController {
             mPowerPluggedInDock = status.isPluggedInDock() && isChargingOrFull;
             mPowerPluggedIn = isPowerPluggedIn(status, isChargingOrFull);
             mPowerCharged = status.isCharged();
-            mChargingCurrent = status.maxChargingCurrent;
-            mChargingVoltage = status.maxChargingVoltage;
             mChargingWattage = status.maxChargingWattage;
             mChargingSpeed = status.getChargingSpeed(mContext);
             mChargingStatus = status.chargingStatus;
             mBatteryLevel = status.level;
             mBatteryPresent = status.present;
-            mTemperature = status.temperature;
             mBatteryDefender = isBatteryDefender(status);
             mBatteryDead = status.isDead();
             // when the battery is overheated, device doesn't charge so only guard on pluggedIn:

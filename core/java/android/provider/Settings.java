@@ -6696,12 +6696,6 @@ public final class Settings {
         public static final String EXTREME_REFRESH_RATE = "extreme_refresh_rate";
 
         /**
-         * Whether to show the battery info on the lockscreen while charging
-         * @hide
-         */
-        public static final String LOCKSCREEN_BATTERY_INFO = "lockscreen_battery_info";
-
-        /**
          * Whether to control brightness from status bar
          * 0 = 0ff, 1 = on
          * @hide

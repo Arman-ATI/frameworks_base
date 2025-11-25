@@ -1742,6 +1742,14 @@ public abstract class ProcessRecordInternal {
         return mProcessEdge;
     }
 
+    public String getProcessName() {
+        return this.processName;
+    }
+
+    public int getUid() {
+        return this.uid;
+    }
+
     /**
      * Lazily initiates and returns the track name for tracing.
      */

@@ -4512,6 +4512,10 @@ public final class ProcessList extends ProcessListInternal
         return mLruProcesses;
     }
 
+    public ArrayList<ProcessRecord> ntGetLruProcesses() {
+        return this.mLruProcesses;
+    }
+
     /**
      * Return the reference to the LRU list, call this function for read/write access
      */

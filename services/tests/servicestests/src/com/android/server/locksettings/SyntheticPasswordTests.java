@@ -46,6 +46,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import android.app.admin.PasswordMetrics;
+import android.content.ComponentName;
 import android.content.pm.UserInfo;
 import android.os.RemoteException;
 import android.platform.test.annotations.DisableFlags;
@@ -504,6 +505,9 @@ public class SyntheticPasswordTests extends BaseLockSettingsServiceTests {
     public void testEscrowTokenCannotBeActivatedOnUnmanagedUser() {
         byte[] token = "some-high-entropy-secure-token".getBytes();
         when(mDeviceStateCache.isUserOrganizationManaged(anyInt())).thenReturn(false);
+        // TODO(b/258213147): Remove
+        when(mUserManagerInternal.isDeviceManaged()).thenReturn(false);
+        when(mUserManagerInternal.isUserManaged(PRIMARY_USER_ID)).thenReturn(false);
         when(mDeviceStateCache.isDeviceProvisioned()).thenReturn(true);
 
         mService.initializeSyntheticPassword(PRIMARY_USER_ID);

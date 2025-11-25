@@ -233,6 +233,7 @@ public abstract class BaseLockSettingsServiceTests {
         // Adding a fake Device Owner app which will enable escrow token support in LSS.
         when(mDevicePolicyManager.getDeviceOwnerComponentOnAnyUser()).thenReturn(
                 new ComponentName("com.dummy.package", ".FakeDeviceOwner"));
+        when(mUserManagerInternal.isDeviceManaged()).thenReturn(true);
         when(mDeviceStateCache.isUserOrganizationManaged(anyInt())).thenReturn(true);
         when(mDeviceStateCache.isDeviceProvisioned()).thenReturn(true);
         mockBiometricsHardwareFingerprintsAndTemplates(PRIMARY_USER_ID);
@@ -295,6 +296,8 @@ public abstract class BaseLockSettingsServiceTests {
         when(mUserManager.isUserRunning(eq(profileId))).thenReturn(true);
         when(mUserManager.isUserUnlocked(eq(profileId))).thenReturn(true);
         when(mUserManagerInternal.getUserInfo(eq(profileId))).thenReturn(userInfo);
+        // TODO(b/258213147): Remove
+        when(mUserManagerInternal.isUserManaged(eq(profileId))).thenReturn(true);
         when(mDeviceStateCache.isUserOrganizationManaged(eq(profileId)))
                 .thenReturn(true);
         return userInfo;

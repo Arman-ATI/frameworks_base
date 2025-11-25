@@ -320,6 +320,11 @@ import java.util.function.Consumer;
 public class DevicePolicyManager {
 
     /** @hide */
+    public static final String DEPRECATE_USERMANAGERINTERNAL_DEVICEPOLICY_FLAG =
+            "deprecate_usermanagerinternal_devicepolicy";
+    /** @hide */
+    public static final boolean DEPRECATE_USERMANAGERINTERNAL_DEVICEPOLICY_DEFAULT = true;
+    /** @hide */
     public static final String ADD_ISFINANCED_DEVICE_FLAG =
             "add-isfinanced-device";
     /** @hide */

@@ -30,8 +30,6 @@
     <dimen name="qs_content_horizontal_padding">24dp</dimen>
     <dimen name="qs_horizontal_margin">24dp</dimen>
 
-    <dimen name="qs_media_session_height_expanded">172dp</dimen>
-
     <dimen name="split_shade_notifications_scrim_margin_bottom">16dp</dimen>
 
     <dimen name="notification_panel_margin_bottom">48dp</dimen>

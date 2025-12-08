@@ -16,6 +16,7 @@
 
 package com.android.systemui.statusbar.pipeline.mobile.ui.binder
 
+import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.view.View
@@ -41,6 +42,7 @@ import com.android.systemui.res.R
 import com.android.systemui.statusbar.StatusBarIconView
 import com.android.systemui.statusbar.pipeline.mobile.domain.model.SignalIconModel
 import com.android.systemui.statusbar.pipeline.mobile.ui.MobileViewLogger
+import com.android.systemui.statusbar.pipeline.mobile.ui.SignalIconLoader
 import com.android.systemui.statusbar.pipeline.mobile.ui.viewmodel.LocationBasedMobileViewModelKairos
 import com.android.systemui.statusbar.pipeline.shared.ui.binder.ModernStatusBarViewBinding
 import com.android.systemui.statusbar.pipeline.shared.ui.binder.ModernStatusBarViewVisibilityHelper
@@ -53,6 +55,15 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.launch
 
 object MobileIconBinderKairos {
+
+    private var signalIconLoader: SignalIconLoader? = null
+
+    private fun initSignalIconLoader(context: Context): SignalIconLoader {
+        if (signalIconLoader == null) {
+            signalIconLoader = SignalIconLoader(context)
+        }
+        return signalIconLoader!!
+    }
 
     @ExperimentalKairosApi
     fun bind(
@@ -231,8 +242,20 @@ object MobileIconBinderKairos {
                     newIcon,
                 )
                 if (newIcon is SignalIconModel.Cellular) {
-                    iconView.setImageDrawable(mobileDrawable)
-                    mobileDrawable.level = newIcon.toSignalDrawableState()
+                    val loader = initSignalIconLoader(view.context)
+
+                    val overlayDrawable = if (loader.hasOverlayIcons()) {
+                        loader.loadSignalIcon(newIcon.level, newIcon.numberOfLevels)
+                    } else {
+                        null
+                    }
+
+                    if (overlayDrawable != null) {
+                        iconView.setImageDrawable(overlayDrawable)
+                    } else {
+                        iconView.setImageDrawable(mobileDrawable)
+                        mobileDrawable.level = newIcon.toSignalDrawableState()
+                    }
                 } else if (newIcon is SignalIconModel.Satellite) {
                     IconViewBinder.bind(newIcon.icon, iconView)
                 }

@@ -26,6 +26,8 @@ import com.android.systemui.log.table.logDiffsForTable
 import com.android.systemui.shade.ShadeDisplayAware
 import com.android.systemui.statusbar.connectivity.ui.MobileContextProvider
 import com.android.systemui.statusbar.pipeline.dagger.StackedMobileIconTableLog
+import com.android.systemui.statusbar.pipeline.mobile.domain.model.SignalIconModel
+import com.android.systemui.statusbar.pipeline.mobile.ui.SignalIconLoader
 import com.android.systemui.statusbar.pipeline.mobile.ui.model.DualSim
 import com.android.systemui.statusbar.pipeline.mobile.ui.model.logDualSimDiff
 import com.android.systemui.statusbar.pipeline.mobile.ui.model.tryParseDualSim
@@ -47,18 +49,30 @@ interface StackedMobileIconViewModel {
     val mobileContext: Context?
     val roaming: Boolean
     val isIconVisible: Boolean
+
+    val useCustomOverlays: Boolean
+    val primaryIcon: SignalIconModel.Cellular?
+    val secondaryIcon: SignalIconModel.Cellular?
+    val primarySubId: Int?
+    val secondarySubId: Int?
+    val primaryNetworkTypeIcon: Icon.Resource?
+    val secondaryNetworkTypeIcon: Icon.Resource?
+    val primaryRoaming: Boolean
+    val secondaryRoaming: Boolean
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class StackedMobileIconViewModelImpl
 @AssistedInject
 constructor(
-    mobileIconsViewModel: MobileIconsViewModel,
+    private val mobileIconsViewModel: MobileIconsViewModel,
     @StackedMobileIconTableLog private val tableLogger: TableLogBuffer,
     @ShadeDisplayAware private val context: Context,
     private val mobileContextProvider: MobileContextProvider,
 ) : ExclusiveActivatable(), StackedMobileIconViewModel {
     private val hydrator = Hydrator("StackedMobileIconViewModel")
+
+    private val signalIconLoader = SignalIconLoader(context)
 
     private val iconViewModelFlow: Flow<List<MobileIconViewModelCommon>> =
         combine(
@@ -81,6 +95,9 @@ constructor(
         combine(_dualSim, mobileIconsViewModel.isStackable) { dualSim, isStackable ->
             dualSim != null && isStackable
         }
+
+    override val useCustomOverlays: Boolean
+        get() = signalIconLoader.hasOverlayIcons()
 
     override val dualSim: DualSim? by
         hydrator.hydratedStateOf(
@@ -178,6 +195,86 @@ constructor(
                     columnName = COL_IS_ICON_VISIBLE,
                     initialValue = false,
                 ),
+            initialValue = false,
+        )
+
+    override val primaryIcon: SignalIconModel.Cellular? by
+        hydrator.hydratedStateOf(
+            traceName = "primaryIcon",
+            source = _dualSim.map { it?.primary },
+            initialValue = null,
+        )
+
+    override val secondaryIcon: SignalIconModel.Cellular? by
+        hydrator.hydratedStateOf(
+            traceName = "secondaryIcon",
+            source = _dualSim.map { it?.secondary },
+            initialValue = null,
+        )
+
+    override val primarySubId: Int? by
+        hydrator.hydratedStateOf(
+            traceName = "primarySubId",
+            source = iconViewModelFlow.map { it.firstOrNull()?.subscriptionId },
+            initialValue = null,
+        )
+
+    override val secondarySubId: Int? by
+        hydrator.hydratedStateOf(
+            traceName = "secondarySubId",
+            source = iconViewModelFlow.map { it.getOrNull(1)?.subscriptionId },
+            initialValue = null,
+        )
+
+    override val primaryNetworkTypeIcon: Icon.Resource? by
+        hydrator.hydratedStateOf(
+            traceName = "primaryNetworkTypeIcon",
+            source = flowIfIconIsVisible(
+                iconViewModelFlow.flatMapLatest { viewModels ->
+                    viewModels.firstOrNull()?.networkTypeIcon ?: flowOf(null)
+                }
+            ),
+            initialValue = null,
+        )
+
+    override val secondaryNetworkTypeIcon: Icon.Resource? by
+        hydrator.hydratedStateOf(
+            traceName = "secondaryNetworkTypeIcon",
+            source = flowIfIconIsVisible(
+                iconViewModelFlow.flatMapLatest { viewModels ->
+                    viewModels.getOrNull(1)?.networkTypeIcon ?: flowOf(null)
+                }
+            ),
+            initialValue = null,
+        )
+
+    override val primaryRoaming: Boolean by
+        hydrator.hydratedStateOf(
+            traceName = "primaryRoaming",
+            source = _isIconVisible.flatMapLatest { isVisible ->
+                if (isVisible) {
+                    iconViewModelFlow.flatMapLatest { viewModels ->
+                        viewModels.firstOrNull()?.roaming ?: flowOf(false)
+                    }
+                } else {
+                    flowOf(false)
+                }
+            },
+            initialValue = false,
+        )
+
+    override val secondaryRoaming: Boolean by
+        hydrator.hydratedStateOf(
+            traceName = "secondaryRoaming",
+            source = _isIconVisible.flatMapLatest { isVisible ->
+                if (isVisible) {
+                    iconViewModelFlow.flatMapLatest { viewModels ->
+                        viewModels.getOrNull(1)?.roaming ?: flowOf(false)
+                    }
+                } else {
+                    flowOf(false)
+                }
+            },
             initialValue = false,
         )
 

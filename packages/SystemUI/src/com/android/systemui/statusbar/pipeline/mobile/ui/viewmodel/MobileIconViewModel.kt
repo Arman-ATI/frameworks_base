@@ -28,6 +28,7 @@ import com.android.systemui.statusbar.pipeline.mobile.domain.interactor.MobileIc
 import com.android.systemui.statusbar.pipeline.mobile.domain.interactor.MobileIconsInteractor
 import com.android.systemui.statusbar.pipeline.mobile.domain.model.SignalIconModel
 import com.android.systemui.statusbar.pipeline.mobile.ui.model.MobileContentDescription
+import com.android.systemui.statusbar.pipeline.mobile.ui.SignalIconLoader
 import com.android.systemui.statusbar.pipeline.shared.ConnectivityConstants
 import com.android.systemui.statusbar.pipeline.shared.data.model.DataActivityModel
 import kotlinx.coroutines.CoroutineScope
@@ -59,6 +60,7 @@ interface MobileIconViewModelCommon {
     val activityOutVisible: Flow<Boolean>
     val activityContainerVisible: Flow<Boolean>
     val showHd: Flow<Boolean>
+    val showRoamingBeside: Flow<Boolean>
 }
 
 /**
@@ -79,6 +81,7 @@ class MobileIconViewModel(
     iconInteractor: MobileIconInteractor,
     airplaneModeInteractor: AirplaneModeInteractor,
     constants: ConnectivityConstants,
+    signalIconLoader: SignalIconLoader,
     scope: CoroutineScope,
 ) : MobileIconViewModelCommon {
     private val cellProvider by lazy {
@@ -87,6 +90,7 @@ class MobileIconViewModel(
             iconInteractor,
             airplaneModeInteractor,
             constants,
+            signalIconLoader,
             scope,
         )
     }
@@ -145,6 +149,9 @@ class MobileIconViewModel(
         vmProvider.flatMapLatest { it.activityContainerVisible }
 
     override val showHd: Flow<Boolean> = vmProvider.flatMapLatest { it.showHd }
+
+    override val showRoamingBeside: Flow<Boolean> =
+        vmProvider.flatMapLatest { it.showRoamingBeside }
 }
 
 /** Representation of this network when it is non-terrestrial (e.g., satellite) */
@@ -171,6 +178,7 @@ private class CarrierBasedSatelliteViewModelImpl(
     override val activityOutVisible: Flow<Boolean> = flowOf(false)
     override val activityContainerVisible: Flow<Boolean> = flowOf(false)
     override val showHd: Flow<Boolean> = flowOf(false)
+    override val showRoamingBeside: Flow<Boolean> = flowOf(false)
 }
 
 /** Terrestrial (cellular) icon. */
@@ -180,6 +188,7 @@ private class CellularIconViewModel(
     iconInteractor: MobileIconInteractor,
     airplaneModeInteractor: AirplaneModeInteractor,
     constants: ConnectivityConstants,
+    private val signalIconLoader: SignalIconLoader,
     scope: CoroutineScope,
 ) : MobileIconViewModelCommon {
     override val isVisible: StateFlow<Boolean> =
@@ -338,6 +347,21 @@ private class CellularIconViewModel(
                 initialValue = false,
             )
             .stateIn(scope, SharingStarted.WhileSubscribed(), false)
+
+    override val showRoamingBeside: Flow<Boolean> =
+        combine(
+            roaming,
+            networkTypeIcon,
+        ) { isRoaming, netTypeIcon ->
+            isRoaming && netTypeIcon != null && signalIconLoader.hasOverlayIcons()
+        }
+        .distinctUntilChanged()
+        .logDiffsForTable(
+            iconInteractor.tableLogBuffer,
+            columnName = "showRoamingBeside",
+            initialValue = false,
+        )
+        .stateIn(scope, SharingStarted.WhileSubscribed(), false)
 
     private val activity: Flow<DataActivityModel?> =
         if (!constants.shouldShowActivityConfig) {

@@ -17,6 +17,7 @@
 package com.android.systemui.statusbar.pipeline.mobile.ui.binder
 
 import android.annotation.ColorInt
+import android.content.Context
 import android.content.res.ColorStateList
 import android.view.View
 import android.view.View.GONE
@@ -24,7 +25,9 @@ import android.view.View.VISIBLE
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.Space
+import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -41,6 +44,7 @@ import com.android.systemui.statusbar.StatusBarIconView.STATE_HIDDEN
 import com.android.systemui.statusbar.core.NewStatusBarIcons
 import com.android.systemui.statusbar.pipeline.mobile.domain.model.SignalIconModel
 import com.android.systemui.statusbar.pipeline.mobile.ui.MobileViewLogger
+import com.android.systemui.statusbar.pipeline.mobile.ui.SignalIconLoader
 import com.android.systemui.statusbar.pipeline.mobile.ui.viewmodel.LocationBasedMobileViewModel
 import com.android.systemui.statusbar.pipeline.shared.ui.binder.ModernStatusBarViewBinding
 import com.android.systemui.statusbar.pipeline.shared.ui.binder.ModernStatusBarViewVisibilityHelper
@@ -55,6 +59,16 @@ data class MobileIconColors(@ColorInt val tint: Int, @ColorInt val contrast: Int
 
 object MobileIconBinder {
     /** Binds the view to the view-model, continuing to update the former based on the latter */
+
+    private var signalIconLoader: SignalIconLoader? = null
+
+    private fun initSignalIconLoader(context: Context): SignalIconLoader {
+        if (signalIconLoader == null) {
+            signalIconLoader = SignalIconLoader(context)
+        }
+        return signalIconLoader!!
+    }
+
     @JvmStatic
     fun bind(
         view: ViewGroup,
@@ -67,11 +81,12 @@ object MobileIconBinder {
         val activityIn = view.requireViewById<ImageView>(R.id.mobile_in)
         val activityOut = view.requireViewById<ImageView>(R.id.mobile_out)
         val networkTypeView = view.requireViewById<ImageView>(R.id.mobile_type)
-        val networkTypeContainer = view.requireViewById<FrameLayout>(R.id.mobile_type_container)
+        val networkTypeContainer = view.requireViewById<LinearLayout>(R.id.mobile_type_container)
         val iconView = view.requireViewById<ImageView>(R.id.mobile_signal)
         val mobileDrawable = SignalDrawable(view.context)
         val mobileHdView = view.requireViewById<ImageView>(R.id.mobile_hd)
         val mobileHdSpace = view.requireViewById<Space>(R.id.mobile_hd_space)
+        val roamingBesideView = view.requireViewById<TextView>(R.id.mobile_roaming_beside)
         val dotView = view.requireViewById<StatusBarIconView>(R.id.status_bar_dot)
 
         view.isVisible = viewModel.isVisible.value
@@ -154,8 +169,20 @@ object MobileIconBinder {
                                     newIcon,
                                 )
                                 if (newIcon is SignalIconModel.Cellular) {
-                                    iconView.setImageDrawable(mobileDrawable)
-                                    mobileDrawable.level = newIcon.toSignalDrawableState()
+                                    val loader = initSignalIconLoader(view.context)
+
+                                    val overlayDrawable = if (loader.hasOverlayIcons()) {
+                                        loader.loadSignalIcon(newIcon.level, newIcon.numberOfLevels)
+                                    } else {
+                                        null
+                                    }
+
+                                    if (overlayDrawable != null) {
+                                        iconView.setImageDrawable(overlayDrawable)
+                                    } else {
+                                        iconView.setImageDrawable(mobileDrawable)
+                                        mobileDrawable.level = newIcon.toSignalDrawableState()
+                                    }
                                 } else if (newIcon is SignalIconModel.Satellite) {
                                     IconViewBinder.bind(newIcon.icon, iconView)
                                 }
@@ -205,6 +232,15 @@ object MobileIconBinder {
                             } else {
                                 networkTypeView.imageTintList =
                                     ColorStateList.valueOf(iconTint.value.tint)
+                            }
+                        }
+                    }
+
+                    launch {
+                        viewModel.showRoamingBeside.distinctUntilChanged().collect { showBeside ->
+                            roamingBesideView.isVisible = showBeside
+                            if (showBeside) {
+                                networkTypeContainer.requestLayout()
                             }
                         }
                     }
@@ -266,6 +302,7 @@ object MobileIconBinder {
                             mobileHdView.imageTintList = tint
                             activityIn.imageTintList = tint
                             activityOut.imageTintList = tint
+                            roamingBesideView.setTextColor(colors.tint)
                             dotView.setDecorColor(colors.tint)
                         }
                     }

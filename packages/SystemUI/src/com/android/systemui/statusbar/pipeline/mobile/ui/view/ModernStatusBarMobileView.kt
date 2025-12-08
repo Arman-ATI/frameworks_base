@@ -20,6 +20,7 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.widget.FrameLayout
+import android.widget.LinearLayout
 import android.widget.ImageView
 import com.android.keyguard.AlphaOptimizedLinearLayout
 import com.android.systemui.kairos.ExperimentalKairosApi
@@ -81,7 +82,7 @@ class ModernStatusBarMobileView(context: Context, attrs: AttributeSet?) :
         }
 
         // RAT indicator container
-        requireViewById<FrameLayout>(R.id.mobile_type_container).apply {
+        requireViewById<LinearLayout>(R.id.mobile_type_container).apply {
             // marginStart is moved to the outer group
             (layoutParams as MarginLayoutParams).marginStart = 0
             (layoutParams as MarginLayoutParams).marginEnd =

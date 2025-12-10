@@ -306,6 +306,7 @@ import javax.inject.Named;
         LowLightClockModule.class,
         PerDisplayRepositoriesModule.class,
         InputDeviceModule.class,
+        com.android.systemui.statusbar.pipeline.wifi.ui.dagger.WifiIconModule.class,
 },
         subcomponents = {
                 ComplicationComponent.class,

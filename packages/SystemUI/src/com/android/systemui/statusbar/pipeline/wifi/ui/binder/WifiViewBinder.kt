@@ -54,6 +54,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 @Suppress("EXPERIMENTAL_IS_NOT_ENABLED")
 object WifiViewBinder {
 
+    private const val OVERLAY_ICON_SCALE = 1.2f
+
     /** Binds the view to the view-model, continuing to update the former based on the latter. */
     @JvmStatic
     fun bind(view: ViewGroup, viewModel: LocationBasedWifiViewModel): ModernStatusBarViewBinding {
@@ -102,9 +104,20 @@ object WifiViewBinder {
 
                 launch {
                     viewModel.wifiIcon.collect { wifiIcon ->
-                        view.isVisible = wifiIcon is WifiIcon.Visible
-                        if (wifiIcon is WifiIcon.Visible) {
-                            IconViewBinder.bind(wifiIcon.icon, iconView)
+                        view.isVisible = when (wifiIcon) {
+                            is WifiIcon.Visible -> {
+                                iconView.scaleX = 1.0f
+                                iconView.scaleY = 1.0f
+                                IconViewBinder.bind(wifiIcon.icon, iconView)
+                                true
+                            }
+                            is WifiIcon.VisibleWithOverlay -> {
+                                iconView.scaleX = OVERLAY_ICON_SCALE
+                                iconView.scaleY = OVERLAY_ICON_SCALE
+                                IconViewBinder.bind(wifiIcon.icon, iconView)
+                                true
+                            }
+                            else -> false
                         }
                     }
                 }
@@ -125,31 +138,27 @@ object WifiViewBinder {
                 if (statusBarStaticInoutIndicators()) {
                     // Set the opacity of the activity indicators
                     launch {
-                        viewModel.isActivityInViewVisible.distinctUntilChanged().collect { visible
-                            ->
+                        viewModel.isActivityInViewVisible.distinctUntilChanged().collect { visible ->
                             activityInView.imageAlpha =
                                 (if (visible) ALPHA_ACTIVE else ALPHA_INACTIVE)
                         }
                     }
 
                     launch {
-                        viewModel.isActivityOutViewVisible.distinctUntilChanged().collect { visible
-                            ->
+                        viewModel.isActivityOutViewVisible.distinctUntilChanged().collect { visible ->
                             activityOutView.imageAlpha =
                                 (if (visible) ALPHA_ACTIVE else ALPHA_INACTIVE)
                         }
                     }
                 } else {
                     launch {
-                        viewModel.isActivityInViewVisible.distinctUntilChanged().collect { visible
-                            ->
+                        viewModel.isActivityInViewVisible.distinctUntilChanged().collect { visible ->
                             activityInView.isVisible = visible
                         }
                     }
 
                     launch {
-                        viewModel.isActivityOutViewVisible.distinctUntilChanged().collect { visible
-                            ->
+                        viewModel.isActivityOutViewVisible.distinctUntilChanged().collect { visible ->
                             activityOutView.isVisible = visible
                         }
                     }
@@ -163,8 +172,7 @@ object WifiViewBinder {
 
                 if (!NewStatusBarIcons.isEnabled) {
                     launch {
-                        viewModel.isAirplaneSpacerVisible.distinctUntilChanged().collect { visible
-                            ->
+                        viewModel.isAirplaneSpacerVisible.distinctUntilChanged().collect { visible ->
                             airplaneSpacer.isVisible = visible
                         }
                     }
@@ -195,14 +203,15 @@ object WifiViewBinder {
 
         return object : ModernStatusBarViewBinding {
             override fun getShouldIconBeVisible(): Boolean {
-                return viewModel.wifiIcon.value is WifiIcon.Visible
+                return viewModel.wifiIcon.value is WifiIcon.Visible ||
+                       viewModel.wifiIcon.value is WifiIcon.VisibleWithOverlay
             }
 
             override fun onVisibilityStateChanged(@StatusBarIconView.VisibleState state: Int) {
                 visibilityState.value = state
             }
 
-            override fun onIconTintChanged(newTint: Int, contrastTint: Int /* unused */) {
+            override fun onIconTintChanged(newTint: Int, contrastTint: Int) {
                 iconTint.value = newTint
             }
 

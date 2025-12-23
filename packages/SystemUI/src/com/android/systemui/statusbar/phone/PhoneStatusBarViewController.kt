@@ -21,11 +21,14 @@ import android.view.Display.DEFAULT_DISPLAY
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
+import android.view.WindowManager
+import android.os.VibrationEffect
 import android.widget.ImageView
 import android.widget.ProgressBar
 import androidx.annotation.VisibleForTesting
 import com.android.systemui.Flags
 import com.android.systemui.Gefingerpoken
+import com.android.systemui.globalactions.GlobalActionsDialogLite
 import com.android.systemui.battery.BatteryMeterView
 import com.android.systemui.dagger.qualifiers.DisplaySpecific
 import com.android.systemui.plugins.DarkIconDispatcher
@@ -85,6 +88,8 @@ private constructor(
     private val statusBarContentInsetsProviderStore: StatusBarContentInsetsProviderStore,
     private val lazyStatusBarShadeDisplayPolicy: Lazy<StatusBarTouchShadeDisplayPolicy>,
     private val lazyShadeDisplaysRepository: Lazy<ShadeDisplaysRepository>,
+    private val globalActionsDialog: GlobalActionsDialogLite,
+    private val windowManager: WindowManager,
 ) : ViewController<PhoneStatusBarView>(view) {
 
     private lateinit var battery: BatteryMeterView
@@ -93,6 +98,11 @@ private constructor(
     private lateinit var endSideContainer: View
     private val statusBarContentInsetsProvider
         get() = statusBarContentInsetsProviderStore.forDisplay(context.displayId)
+
+    // System icons popup controller
+    private var systemIconsPopupController: SystemIconsPopupController? = null
+    private var isPopupShowing = false
+    private val vibrator = context.getSystemService(android.os.Vibrator::class.java)
 
     // Creates a [View.OnTouchListener] that only handles mouse click events.
     private fun createMouseClickListener(onClick: () -> Unit): View.OnTouchListener =
@@ -165,6 +175,18 @@ private constructor(
 
     private fun addCursorSupportToIconContainers() {
         endSideContainer = mView.requireViewById(R.id.system_icons)
+        
+        // Initialize the popup controller
+        systemIconsPopupController = SystemIconsPopupController(
+            context = context,
+            windowManager = windowManager,
+            globalActionsDialog = globalActionsDialog
+        )
+        
+        // Set up long click listener for system icons popup
+        endSideContainer.setOnLongClickListener { toggleSystemIconsPopup() }
+        endSideContainer.isLongClickable = true
+        
         endSideContainer.setOnHoverListener(
             statusOverlayHoverListenerFactory.createDarkAwareListener(endSideContainer)
         )
@@ -191,11 +213,34 @@ private constructor(
         )
     }
 
+    private fun toggleSystemIconsPopup(): Boolean {
+        systemIconsPopupController?.let { controller ->
+            if (controller.isShowing) {
+                controller.hidePopup()
+                isPopupShowing = false
+            } else {
+                vibrator?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
+
+                controller.showPopup(endSideContainer)
+                isPopupShowing = true
+            }
+        }
+        return true
+    }
+    
     @VisibleForTesting
     public override fun onViewDetached() {
+        if (isPopupShowing) {
+            systemIconsPopupController?.hidePopup()
+            isPopupShowing = false
+        }
+        systemIconsPopupController = null
+        
         removeDarkReceivers()
         startSideContainer.setOnHoverListener(null)
         endSideContainer.setOnHoverListener(null)
+        endSideContainer.setOnClickListener(null)
+        endSideContainer.setOnLongClickListener(null)
         progressProvider?.setReadyToHandleTransition(false)
         if (!ShadeWindowGoesAround.isEnabled) {
             configurationController.removeCallback(configurationListener)
@@ -368,6 +413,8 @@ private constructor(
         private val statusBarContentInsetsProviderStore: StatusBarContentInsetsProviderStore,
         private val lazyStatusBarShadeDisplayPolicy: Lazy<StatusBarTouchShadeDisplayPolicy>,
         private val lazyShadeDisplaysRepository: Lazy<ShadeDisplaysRepository>,
+        private val globalActionsDialog: GlobalActionsDialogLite,
+        private val windowManager: WindowManager,
     ) {
         fun create(view: PhoneStatusBarView): PhoneStatusBarViewController {
             return PhoneStatusBarViewController(
@@ -390,6 +437,8 @@ private constructor(
                 statusBarContentInsetsProviderStore,
                 lazyStatusBarShadeDisplayPolicy,
                 lazyShadeDisplaysRepository,
+                globalActionsDialog,
+                windowManager,
             )
         }
     }

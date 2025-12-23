@@ -80,6 +80,7 @@ object WifiViewBinder {
         val decorTint: MutableStateFlow<Int> = MutableStateFlow(viewModel.defaultColor)
 
         var isCollecting: Boolean = false
+        var currentWifiIcon: WifiIcon? = null
 
         view.repeatWhenAttached {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -104,6 +105,7 @@ object WifiViewBinder {
 
                 launch {
                     viewModel.wifiIcon.collect { wifiIcon ->
+                        currentWifiIcon = wifiIcon
                         view.isVisible = when (wifiIcon) {
                             is WifiIcon.Visible -> {
                                 iconView.scaleX = 1.0f
@@ -130,6 +132,11 @@ object WifiViewBinder {
                         activityOutView.imageTintList = tintList
                         voWifiView.imageTintList = tintList
                         dotView.setDecorColor(tint)
+                        currentWifiIcon?.let { icon ->
+                            if (icon is WifiIcon.VisibleWithOverlay) {
+                                IconViewBinder.bind(icon.icon, iconView)
+                            }
+                        }
                     }
                 }
 

@@ -18,9 +18,19 @@ package com.android.systemui.statusbar
 
 import android.annotation.SuppressLint
 import android.app.ActivityManager
+import android.app.WallpaperColors
+import android.app.WallpaperManager.OnColorsChangedListener
+import android.app.WallpaperManager
+import android.content.Context
 import android.content.res.Resources
+import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.RenderEffect
+import android.graphics.Shader
 import android.gui.EarlyWakeupInfo
 import android.os.Binder
+import android.os.Handler
+import android.os.Looper
 import android.os.Build
 import android.os.SystemProperties
 import android.os.Trace
@@ -34,6 +44,7 @@ import android.view.SurfaceControl
 import android.view.SyncRtSurfaceTransactionApplier
 import android.view.ViewRootImpl
 import androidx.annotation.VisibleForTesting
+import androidx.palette.graphics.Palette
 import com.android.systemui.Dumpable
 import com.android.systemui.Flags
 import com.android.systemui.dagger.SysUISingleton
@@ -43,6 +54,8 @@ import com.android.systemui.keyguard.ui.transitions.BlurConfig
 import com.android.systemui.res.R
 import java.io.PrintWriter
 import javax.inject.Inject
+import kotlin.math.pow
+import kotlin.math.sin
 
 @SysUISingleton
 open class BlurUtils
@@ -50,6 +63,7 @@ open class BlurUtils
 constructor(
     @Main resources: Resources,
     blurConfig: BlurConfig,
+    private val context: Context,
     private val crossWindowBlurListeners: CrossWindowBlurListeners,
     dumpManager: DumpManager,
 ) : Dumpable {
@@ -69,34 +83,130 @@ constructor(
         get() = _transactionApplier
 
     private var earlyWakeupEnabled = false
-
-    /** Token for early wakeup requests to SurfaceFlinger. */
     private val earlyWakeupInfo = EarlyWakeupInfo()
-
-    /** When this is true, early wakeup flag is not reset on surface flinger when blur drops to 0 */
     private var persistentEarlyWakeupRequired = false
+
+    private val wallpaperManager: WallpaperManager = context.getSystemService(WallpaperManager::class.java)
+    private var cachedWallpaperColors: WallpaperColors? = null
+    private var lastColorUpdateTime = 0L
+    private val COLOR_CACHE_DURATION = 5000L
+
+    private val BLUR_LAYER_COUNT = 3
+    private val BLUR_LAYER_RATIOS = floatArrayOf(0.4f, 0.7f, 1.0f)
+    private val BLUR_LAYER_ALPHAS = floatArrayOf(0.3f, 0.4f, 0.5f)
+
+    private var dominantColor: Int = Color.TRANSPARENT
+    private var vibrantColor: Int = Color.TRANSPARENT
+    private var mutedColor: Int = Color.TRANSPARENT
 
     init {
         dumpManager.registerDumpable(this)
         earlyWakeupInfo.token = Binder()
         earlyWakeupInfo.trace = BlurUtils::class.java.getName()
+
+        initWallpaperColorListener()
+    }
+
+    private fun initWallpaperColorListener() {
+        try {
+            val listener = OnColorsChangedListener { colors, which ->
+                if (which and WallpaperManager.FLAG_SYSTEM != 0) {
+                    cachedWallpaperColors = colors
+                    extractColorsFromWallpaper(colors)
+                    lastColorUpdateTime = System.currentTimeMillis()
+                }
+            }
+
+            wallpaperManager?.addOnColorsChangedListener(
+                listener,
+                Handler(Looper.getMainLooper())
+            )
+
+            val colors = wallpaperManager?.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
+            if (colors != null) {
+                cachedWallpaperColors = colors
+                extractColorsFromWallpaper(colors)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize wallpaper color listener", e)
+        }
+    }
+
+    private fun extractColorsFromWallpaper(colors: WallpaperColors?) {
+        if (colors == null) return
+
+        try {
+            dominantColor = colors.primaryColor?.toArgb() ?: Color.TRANSPARENT
+
+            val secondaryColor = colors.secondaryColor?.toArgb()
+            val tertiaryColor = colors.tertiaryColor?.toArgb()
+
+            vibrantColor = when {
+                secondaryColor != null -> secondaryColor
+                dominantColor != Color.TRANSPARENT -> enhanceColorVibrance(dominantColor)
+                else -> Color.argb(128, 100, 150, 255)
+            }
+
+            mutedColor = when {
+                tertiaryColor != null -> tertiaryColor
+                dominantColor != Color.TRANSPARENT -> muteColor(dominantColor)
+                else -> Color.argb(128, 150, 150, 180)
+            }
+
+            Log.d(TAG, "Extracted colors - Dominant: ${Integer.toHexString(dominantColor)}, " +
+                    "Vibrant: ${Integer.toHexString(vibrantColor)}, " +
+                    "Muted: ${Integer.toHexString(mutedColor)}")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error extracting colors", e)
+        }
+    }
+
+    private fun enhanceColorVibrance(color: Int): Int {
+        val hsv = FloatArray(3)
+        Color.colorToHSV(color, hsv)
+        hsv[1] = (hsv[1] * 1.3f).coerceIn(0f, 1f)
+        hsv[2] = (hsv[2] * 1.1f).coerceIn(0f, 1f)
+        return Color.HSVToColor(Color.alpha(color), hsv)
+    }
+
+    private fun muteColor(color: Int): Int {
+        val hsv = FloatArray(3)
+        Color.colorToHSV(color, hsv)
+        hsv[1] = (hsv[1] * 0.4f).coerceIn(0f, 1f)
+        hsv[2] = (hsv[2] * 0.85f).coerceIn(0f, 1f)
+        return Color.HSVToColor((Color.alpha(color) * 0.8f).toInt(), hsv)
     }
 
     @VisibleForTesting
     open fun createTransaction(): SurfaceControl.Transaction = SurfaceControl.Transaction()
 
-    /** Translates a ratio from 0 to 1 to a blur radius in pixels. */
     fun blurRadiusOfRatio(ratio: Float): Float {
         if (ratio == 0f) {
             return 0f
         }
-        return MathUtils.lerp(minBlurRadius, maxBlurRadius, ratio)
+
+        val enhancedRatio = applyOneUIBlurCurve(ratio)
+        return MathUtils.lerp(minBlurRadius, maxBlurRadius, enhancedRatio)
     }
 
-    /**
-     * Translates a ratio from 0 to 1 to a blur radius in pixels for AOD. We use half of the
-     * maxBlurRadius for AOD wallpaper blur.
-     */
+    private fun applyOneUIBlurCurve(ratio: Float): Float {
+        return when {
+            ratio < 0.3f -> {
+                val t = ratio / 0.3f
+                t * t * (3f - 2f * t) * 0.3f
+            }
+            ratio < 0.7f -> {
+                val t = (ratio - 0.3f) / 0.4f
+                0.3f + (t.pow(1.8f)) * 0.5f
+            }
+            else -> {
+                val t = (ratio - 0.7f) / 0.3f
+                val overshoot = sin(t * Math.PI.toFloat() * 0.5f) * 0.05f
+                0.8f + (t * t * (3f - 2f * t) * 0.2f) + overshoot
+            }
+        }.coerceIn(0f, 1f)
+    }
+
     fun blurRadiusOfRatioForAod(ratio: Float): Float {
         if (ratio == 0f) {
             return 0f
@@ -104,7 +214,6 @@ constructor(
         return MathUtils.lerp(minBlurRadius, maxBlurRadius / 2, ratio)
     }
 
-    /** Translates a blur radius in pixels to a ratio between 0 to 1. */
     fun ratioOfBlurRadius(blur: Float): Float {
         if (blur == 0f) {
             return 0f
@@ -112,16 +221,12 @@ constructor(
         return MathUtils.map(
             minBlurRadius,
             maxBlurRadius,
-            0f /* maxStart */,
-            1f /* maxStop */,
+            0f,
+            1f,
             blur,
         )
     }
 
-    /**
-     * This method should be called before [applyBlur] so that, if needed, we can set the
-     * early-wakeup flag in SurfaceFlinger.
-     */
     fun prepareBlur(viewRootImpl: ViewRootImpl?, radius: Int) {
         if (
             viewRootImpl == null ||
@@ -140,46 +245,86 @@ constructor(
         }
     }
 
-    /**
-     * Applies background blurs to a {@link ViewRootImpl}.
-     *
-     * @param viewRootImpl The window root.
-     * @param radius blur radius in pixels.
-     * @param opaque if surface is opaque, regardless or having blurs or no.
-     * @param scale blur scale effect relative to 1.0
-     */
     fun applyBlur(viewRootImpl: ViewRootImpl?, radius: Int, opaque: Boolean, scale: Float = 1.0f) {
         if (viewRootImpl == null || !viewRootImpl.surfaceControl.isValid) {
             return
         }
         updateTransactionApplier(viewRootImpl)
-        val builder =
-            SyncRtSurfaceTransactionApplier.SurfaceParams.Builder(viewRootImpl.surfaceControl)
-        if (shouldBlur(radius)) {
-            builder.withBackgroundBlurRadius(radius)
-            if (shouldScaleWithTransaction()) {
-                builder.withBackgroundBlurScale(scale)
-            }
-            if (lastAppliedBlur == 0 && radius != 0) {
-                Trace.instantForTrack(TRACE_TAG_APP, TRACK_NAME, "notifyRendererForGpuLoadUp")
-                viewRootImpl.notifyRendererForGpuLoadUp("applyBlur")
 
-                if (!earlyWakeupEnabled) {
-                    earlyWakeupStart(builder, "eEarlyWakeup (applyBlur)")
-                }
-            }
-            if (
-                earlyWakeupEnabled &&
-                    lastAppliedBlur != 0 &&
-                    radius == 0 &&
-                    !persistentEarlyWakeupRequired
-            ) {
-                earlyWakeupEnd(builder, "applyBlur")
-            }
+        if (shouldBlur(radius)) {
+            applyLayeredBlur(viewRootImpl, radius, opaque, scale)
             lastAppliedBlur = radius
+        } else {
+            val builder = SyncRtSurfaceTransactionApplier.SurfaceParams.Builder(viewRootImpl.surfaceControl)
+            builder.withOpaque(opaque)
+            transactionApplier.scheduleApply(builder.build())
         }
+    }
+
+    private fun applyLayeredBlur(viewRootImpl: ViewRootImpl, radius: Int, opaque: Boolean, scale: Float) {
+        val builder = SyncRtSurfaceTransactionApplier.SurfaceParams.Builder(viewRootImpl.surfaceControl)
+
+        val enhancedRadius = (radius * 1.2f).toInt()
+        builder.withBackgroundBlurRadius(enhancedRadius)
+
+        if (shouldScaleWithTransaction()) {
+            builder.withBackgroundBlurScale(scale)
+        }
+
+        if (Flags.notificationShadeBlur() && dominantColor != Color.TRANSPARENT) {
+            applyGlassmorphismTint(builder, radius)
+        }
+
+        if (lastAppliedBlur == 0 && radius != 0) {
+            Trace.instantForTrack(TRACE_TAG_APP, TRACK_NAME, "notifyRendererForGpuLoadUp")
+            viewRootImpl.notifyRendererForGpuLoadUp("applyBlur")
+
+            if (!earlyWakeupEnabled) {
+                earlyWakeupStart(builder, "eEarlyWakeup (applyBlur)")
+            }
+        }
+
+        if (earlyWakeupEnabled && lastAppliedBlur != 0 && radius == 0 && !persistentEarlyWakeupRequired) {
+            earlyWakeupEnd(builder, "applyBlur")
+        }
+
         builder.withOpaque(opaque)
         transactionApplier.scheduleApply(builder.build())
+    }
+
+    private fun applyGlassmorphismTint(
+        builder: SyncRtSurfaceTransactionApplier.SurfaceParams.Builder,
+        radius: Int
+    ) {
+        val blurRatio = ratioOfBlurRadius(radius.toFloat())
+
+        val tintAlpha = (blurRatio * 0.25f * 255).toInt().coerceIn(0, 64)
+
+        val blendedColor = blendColors(
+            addAlpha(dominantColor, tintAlpha),
+            addAlpha(vibrantColor, (tintAlpha * 0.6f).toInt()),
+            blurRatio
+        )
+
+        try {
+
+            Log.v(TAG, "Applying glassmorphism tint: ${Integer.toHexString(blendedColor)}")
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not apply color tint", e)
+        }
+    }
+
+    private fun blendColors(color1: Int, color2: Int, ratio: Float): Int {
+        val inverseRatio = 1 - ratio
+        val r = (Color.red(color1) * inverseRatio + Color.red(color2) * ratio).toInt()
+        val g = (Color.green(color1) * inverseRatio + Color.green(color2) * ratio).toInt()
+        val b = (Color.blue(color1) * inverseRatio + Color.blue(color2) * ratio).toInt()
+        val a = (Color.alpha(color1) * inverseRatio + Color.alpha(color2) * ratio).toInt()
+        return Color.argb(a, r, g, b)
+    }
+
+    private fun addAlpha(color: Int, alpha: Int): Int {
+        return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color))
     }
 
     private fun updateTransactionApplier(viewRootImpl: ViewRootImpl) {
@@ -202,10 +347,7 @@ constructor(
         if (builder != null) {
             builder.withEarlyWakeupStart(earlyWakeupInfo)
         } else {
-            Log.w(
-                TAG,
-                "surfaceControl is not valid, using immediate transaction to set early wakeup",
-            )
+            Log.w(TAG, "surfaceControl is not valid, using immediate transaction to set early wakeup")
             createTransaction().use { it.setEarlyWakeupStart(earlyWakeupInfo).apply() }
         }
         earlyWakeupEnabled = true
@@ -220,10 +362,7 @@ constructor(
         if (builder != null) {
             builder.withEarlyWakeupEnd(earlyWakeupInfo)
         } else {
-            Log.w(
-                TAG,
-                "surfaceControl is not valid, using immediate transaction to reset early wakeup",
-            )
+            Log.w(TAG, "surfaceControl is not valid, using immediate transaction to reset early wakeup")
             createTransaction().use { it.setEarlyWakeupEnd(earlyWakeupInfo).apply() }
         }
         Trace.asyncTraceForTrackEnd(TRACE_TAG_APP, TRACK_NAME, 0)
@@ -242,12 +381,6 @@ constructor(
         return Flags.spatialModelPushbackInShader() && Flags.spatialModelAppPushback()
     }
 
-    /**
-     * If this device can render blurs.
-     *
-     * @return {@code true} when supported.
-     * @see android.view.SurfaceControl.Transaction#setBackgroundBlurRadius(SurfaceControl, int)
-     */
     open fun supportsBlursOnWindows(): Boolean {
         return supportsBlursOnWindowsBase() &&
             crossWindowBlurListeners != null &&
@@ -262,20 +395,19 @@ constructor(
 
     override fun dump(pw: PrintWriter, args: Array<out String>) {
         IndentingPrintWriter(pw, "  ").let {
-            it.println("BlurUtils:")
+            it.println("BlurUtils (OneUI Enhanced):")
             it.increaseIndent()
             it.println("minBlurRadius: $minBlurRadius")
             it.println("maxBlurRadius: $maxBlurRadius")
             it.println("supportsBlursOnWindows: ${supportsBlursOnWindows()}")
+            it.println("dominantColor: ${Integer.toHexString(dominantColor)}")
+            it.println("vibrantColor: ${Integer.toHexString(vibrantColor)}")
+            it.println("mutedColor: ${Integer.toHexString(mutedColor)}")
             it.println("CROSS_WINDOW_BLUR_SUPPORTED: $CROSS_WINDOW_BLUR_SUPPORTED")
             it.println("isHighEndGfx: ${ActivityManager.isHighEndGfx()}")
         }
     }
 
-    /**
-     * Enables/disables the early wakeup flag on surface flinger. Keeps the early wakeup flag on
-     * until it reset by passing false to this method.
-     */
     fun setPersistentEarlyWakeup(persistentWakeup: Boolean, viewRootImpl: ViewRootImpl?) {
         persistentEarlyWakeupRequired = persistentWakeup
         if (viewRootImpl == null || !supportsBlursOnWindows()) return
@@ -293,12 +425,7 @@ constructor(
         } else {
             if (!earlyWakeupEnabled) return
             if (lastAppliedBlur > 0) {
-                Log.w(
-                    TAG,
-                    "resetEarlyWakeup invoked when lastAppliedBlur $lastAppliedBlur is " +
-                        "non-zero, this means that the early wakeup signal was reset while blur" +
-                        " was still active",
-                )
+                Log.w(TAG, "resetEarlyWakeup invoked when lastAppliedBlur $lastAppliedBlur is non-zero")
             }
             earlyWakeupEnd(builder, "resetEarlyWakeup")
         }

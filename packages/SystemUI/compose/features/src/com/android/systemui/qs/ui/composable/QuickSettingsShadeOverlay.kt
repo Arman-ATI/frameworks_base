@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -65,14 +65,16 @@ import com.android.systemui.brightness.ui.compose.ContainerColors
 import com.android.systemui.compose.modifiers.sysuiResTag
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.lifecycle.rememberViewModel
-import com.android.systemui.media.controls.ui.composable.MediaCarousel
 import com.android.systemui.media.controls.ui.view.MediaHostState.Companion.COLLAPSED
+import com.android.systemui.media.ui.compose.MiniPlayerCompact
+import com.android.systemui.media.ui.viewmodel.MiniPlayerViewModel
 import com.android.systemui.notifications.ui.composable.SnoozeableHeadsUpNotificationSpace
 import com.android.systemui.qs.composefragment.ui.GridAnchor
 import com.android.systemui.qs.flags.QsDetailedView
 import com.android.systemui.qs.panels.ui.compose.EditMode
 import com.android.systemui.qs.panels.ui.compose.TileDetails
 import com.android.systemui.qs.panels.ui.compose.TileGrid
+import com.android.systemui.qs.panels.ui.compose.infinitegrid.FullScreenTilePicker
 import com.android.systemui.qs.panels.ui.compose.toolbar.Toolbar
 import com.android.systemui.qs.ui.composable.QuickSettingsShade.systemGestureExclusionInShade
 import com.android.systemui.qs.ui.viewmodel.QuickSettingsContainerViewModel
@@ -103,6 +105,7 @@ constructor(
     private val actionsViewModelFactory: QuickSettingsShadeOverlayActionsViewModel.Factory,
     private val contentViewModelFactory: QuickSettingsShadeOverlayContentViewModel.Factory,
     private val quickSettingsContainerViewModelFactory: QuickSettingsContainerViewModel.Factory,
+    private val miniPlayerViewModelFactory: MiniPlayerViewModel.Factory,
     private val notificationStackScrollView: Lazy<NotificationScrollView>,
     private val notificationsPlaceholderViewModelFactory: NotificationsPlaceholderViewModel.Factory,
 ) : Overlay {
@@ -172,7 +175,10 @@ constructor(
                     )
                 },
             ) {
-                QuickSettingsContainer(viewModel = quickSettingsContainerViewModel)
+                QuickSettingsContainer(
+                    viewModel = quickSettingsContainerViewModel,
+                    miniPlayerViewModelFactory = miniPlayerViewModelFactory,
+                )
             }
             SnoozeableHeadsUpNotificationSpace(
                 stackScrollView = notificationStackScrollView.get(),
@@ -184,6 +190,8 @@ constructor(
 
 /** The possible states of the `ShadeBody`. */
 private sealed interface ShadeBodyState {
+    data object TilePicker : ShadeBodyState
+
     data object Editing : ShadeBodyState
 
     data object TileDetails : ShadeBodyState
@@ -194,9 +202,11 @@ private sealed interface ShadeBodyState {
 @Composable
 fun ContentScope.QuickSettingsContainer(
     viewModel: QuickSettingsContainerViewModel,
+    miniPlayerViewModelFactory: MiniPlayerViewModel.Factory,
     modifier: Modifier = Modifier,
 ) {
     val isEditing by viewModel.editModeViewModel.isEditing.collectAsStateWithLifecycle()
+    val showTilePicker by viewModel.showTilePicker.collectAsStateWithLifecycle()
     val tileDetails =
         if (QsDetailedView.isEnabled) viewModel.detailsViewModel.activeTileDetails else null
 
@@ -204,6 +214,7 @@ fun ContentScope.QuickSettingsContainer(
         modifier = Modifier.sysuiResTag("quick_settings_container"),
         targetState =
             when {
+                showTilePicker -> ShadeBodyState.TilePicker
                 isEditing -> ShadeBodyState.Editing
                 tileDetails != null -> ShadeBodyState.TileDetails
                 else -> ShadeBodyState.Default
@@ -211,6 +222,21 @@ fun ContentScope.QuickSettingsContainer(
         transitionSpec = { fadeIn(tween(500)) togetherWith fadeOut(tween(500)) },
     ) { state ->
         when (state) {
+            ShadeBodyState.TilePicker -> {
+                val tiles by
+                    viewModel.getTilesForPicker().collectAsStateWithLifecycle(initialValue = emptyList())
+                FullScreenTilePicker(
+                    allTiles = tiles,
+                    insideSpecs = emptyList(),
+                    onClose = {
+                        viewModel.closeTilePicker()
+                        viewModel.editModeViewModel.stopEditing()
+                    },
+                    onTileClick = { tile -> viewModel.addTileFromPicker(tile.tileSpec) },
+                    modifier = modifier.fillMaxWidth().padding(QuickSettingsShade.Dimensions.Padding),
+                )
+            }
+
             ShadeBodyState.Editing -> {
                 EditMode(
                     viewModel = viewModel.editModeViewModel,
@@ -226,6 +252,7 @@ fun ContentScope.QuickSettingsContainer(
             ShadeBodyState.Default -> {
                 QuickSettingsLayout(
                     viewModel = viewModel,
+                    miniPlayerViewModelFactory = miniPlayerViewModelFactory,
                     modifier = modifier.sysuiResTag("quick_settings_panel"),
                 )
             }
@@ -237,8 +264,13 @@ fun ContentScope.QuickSettingsContainer(
 @Composable
 fun ContentScope.QuickSettingsLayout(
     viewModel: QuickSettingsContainerViewModel,
+    miniPlayerViewModelFactory: MiniPlayerViewModel.Factory,
     modifier: Modifier = Modifier,
 ) {
+    val miniPlayerViewModel = rememberViewModel("MiniPlayerOverlay") {
+        miniPlayerViewModelFactory.create()
+    }
+
     Column(
         verticalArrangement = Arrangement.spacedBy(QuickSettingsShade.Dimensions.Padding),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -265,12 +297,10 @@ fun ContentScope.QuickSettingsLayout(
             verticalArrangement = Arrangement.spacedBy(QuickSettingsShade.Dimensions.Padding),
             modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
         ) {
-            MediaCarousel(
-                isVisible = viewModel.showMedia,
-                mediaHost = viewModel.mediaHost,
-                carouselController = viewModel.mediaCarouselController,
-                usingCollapsedLandscapeMedia = true,
-                modifier = Modifier.padding(horizontal = QuickSettingsShade.Dimensions.Padding),
+            MiniPlayerCompact(
+                viewModel = miniPlayerViewModel,
+                compact = true,
+                modifier = Modifier.fillMaxWidth()
             )
 
             Box(

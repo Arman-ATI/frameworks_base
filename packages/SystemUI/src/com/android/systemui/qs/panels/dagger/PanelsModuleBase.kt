@@ -18,6 +18,7 @@ package com.android.systemui.qs.panels.dagger
 
 import com.android.systemui.CoreStartable
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.log.LogBuffer
 import com.android.systemui.log.LogBufferFactory
 import com.android.systemui.log.table.TableLogBuffer
@@ -28,6 +29,8 @@ import com.android.systemui.qs.panels.domain.interactor.EditTilesResetInteractor
 import com.android.systemui.qs.panels.domain.interactor.SizedTilesResetInteractor
 import com.android.systemui.qs.panels.domain.startable.QSPanelsCoreStartable
 import com.android.systemui.qs.panels.shared.model.GridLayoutType
+import com.android.systemui.qs.panels.ui.viewmodel.SectionEditModeViewModel
+import com.android.systemui.qs.panels.domain.interactor.QSSectionsInteractor
 import com.android.systemui.qs.panels.shared.model.InfiniteGridLayoutType
 import com.android.systemui.qs.panels.shared.model.PaginatedGridLayoutType
 import com.android.systemui.qs.panels.shared.model.PanelsLog
@@ -44,6 +47,7 @@ import dagger.Provides
 import dagger.multibindings.ClassKey
 import dagger.multibindings.IntoMap
 import dagger.multibindings.IntoSet
+import kotlinx.coroutines.CoroutineScope
 import javax.inject.Named
 
 @Module
@@ -111,6 +115,27 @@ interface PanelsModuleBase {
             entries: Set<@JvmSuppressWildcards Pair<GridLayoutType, GridLayout>>
         ): Set<GridLayoutType> {
             return entries.map { it.first }.toSet()
+        }
+
+        @Provides
+        @SysUISingleton
+        @Named("QSSectionsScope")
+        fun provideQSSectionsCoroutineScope(
+            @Application applicationScope: CoroutineScope
+        ): CoroutineScope {
+            return applicationScope
+        }
+
+        @Provides
+        @Named("MainQSTilesKey")
+        fun provideMainQSTilesKey(): String {
+            return "main_qs_floating_tiles"
+        }
+
+        @Provides
+        @Named("SectionTilesPrefix")
+        fun provideSectionTilesPrefix(): String {
+            return "section_tiles_"
         }
     }
 }

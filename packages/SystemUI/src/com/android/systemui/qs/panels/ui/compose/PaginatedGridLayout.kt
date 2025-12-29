@@ -27,6 +27,10 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.integerResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.android.compose.animation.scene.ContentScope
@@ -55,6 +60,7 @@ import com.android.systemui.qs.panels.ui.compose.Dimensions.InterPageSpacing
 import com.android.systemui.qs.panels.ui.compose.toolbar.EditModeButton
 import com.android.systemui.qs.panels.ui.viewmodel.PaginatedGridViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.TileViewModel
+import com.android.systemui.qs.panels.ui.viewmodel.SectionEditModeViewModel
 import com.android.systemui.qs.panels.ui.viewmodel.toolbar.EditModeButtonViewModel
 import com.android.systemui.res.R
 import javax.inject.Inject
@@ -64,6 +70,7 @@ class PaginatedGridLayout
 constructor(
     private val viewModelFactory: PaginatedGridViewModel.Factory,
     @PaginatedBaseLayoutType private val delegateGridLayout: PaginatableGridLayout,
+    private val sectionEditModeViewModel: SectionEditModeViewModel,
 ) : GridLayout by delegateGridLayout {
     @Composable
     override fun ContentScope.TileGrid(
@@ -147,6 +154,7 @@ constructor(
                 buildNumberViewModelFactory = viewModel.buildNumberViewModelFactory,
                 pagerState = pagerState,
                 editButtonViewModelFactory = viewModel.editModeButtonViewModelFactory,
+                sectionEditModeViewModel = sectionEditModeViewModel,
                 isVisible = {
                     with(layoutState.transitionState) {
                         currentScene == SceneKeys.QuickSettings && this is TransitionState.Idle
@@ -167,6 +175,7 @@ private fun FooterBar(
     buildNumberViewModelFactory: BuildNumberViewModel.Factory,
     pagerState: PagerState,
     editButtonViewModelFactory: EditModeButtonViewModel.Factory,
+    sectionEditModeViewModel: SectionEditModeViewModel,
     isVisible: () -> Boolean = { true },
 ) {
     val editButtonViewModel =
@@ -200,6 +209,12 @@ private fun FooterBar(
         Row(Modifier.weight(1f)) {
             Spacer(modifier = Modifier.weight(1f))
             EditModeButton(viewModel = editButtonViewModel, isVisible = isVisible())
+            IconButton(onClick = { sectionEditModeViewModel.startEditingSections() }) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = stringResource(R.string.qs_section_edit_button)
+                )
+            }
         }
     }
 }

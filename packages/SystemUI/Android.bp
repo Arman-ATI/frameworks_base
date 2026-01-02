@@ -574,6 +574,8 @@ android_library {
         "personalcontext_ace_visualizer",
         "vendor.lineage.powershare-V1-java",
         "FadingEdgeLayoutLib",
+        "smartspace-proto-java",
+        "smartspace-proto-lite-java",
     ],
     enable_ksp: true,
     annotation_processor_flags: [

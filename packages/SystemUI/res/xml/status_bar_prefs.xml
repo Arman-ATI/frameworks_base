@@ -169,7 +169,7 @@
         android:title="@string/legacy_vpn_name" />
 
     <com.android.systemui.tuner.BatteryPreference
-        android:icon="@*android:drawable/ic_battery"
+        android:icon="@drawable/ic_statusbar_battery"
         android:title="@string/battery"
         android:summary="%s"
         android:entries="@array/battery_options" />

@@ -300,19 +300,26 @@ constructor(
     }
 
     override val isStackable: State<Boolean> =
-        if (NewStatusBarIcons.isEnabled) {
-            icons.flatMap { iconsBySubId: Map<Int, MobileIconInteractorKairos> ->
-                iconsBySubId.values
-                    .map { it.signalLevelIcon }
-                    .combine { signalLevelIcons ->
-                        // These are only stackable if:
-                        // - They are cellular
-                        // - There's exactly two
-                        // - They have the same number of levels
-                        signalLevelIcons
-                            .filterIsInstance<SignalIconModel.CellularTypeIconModel.Cellular>()
-                            .let { it.size == 2 && it[0].numberOfLevels == it[1].numberOfLevels }
-                    }
+        if (NewStatusBarIcons.isEnabled && StatusBarRootModernization.isEnabled) {
+            combine(
+                icons.flatMap { iconsBySubId: Map<Int, MobileIconInteractorKairos> ->
+                    iconsBySubId.values
+                        .map { it.signalLevelIcon }
+                        .combine { signalLevelIcons ->
+                            // These are only stackable if:
+                            // - They are cellular
+                            // - There's exactly two
+                            // - They have the same number of levels
+                            signalLevelIcons
+                                .filterIsInstance<SignalIconModel.CellularTypeIconModel.Cellular>()
+                                .let { it.size == 2 && it[0].numberOfLevels == it[1].numberOfLevels }
+                        }
+                },
+                icons.flatMap { iconsBySubId ->
+                    iconsBySubId.values.firstOrNull()?.disableStackedMobileIcons ?: stateOf(false)
+                },
+            ) { shouldStack, disableStacking ->
+                shouldStack && !disableStacking
             }
         } else {
             stateOf(false)

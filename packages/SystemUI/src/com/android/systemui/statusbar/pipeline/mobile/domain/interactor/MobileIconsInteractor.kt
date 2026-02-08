@@ -326,25 +326,34 @@ constructor(
             }
             .stateIn(scope, SharingStarted.WhileSubscribed(), emptyList())
 
-    override val isStackable =
-        if (NewStatusBarIcons.isEnabled) {
-            icons.flatMapLatest { icons ->
-                if (icons.isEmpty()) {
-                    flowOf(false)
-                } else {
-                    combine(icons.map { it.signalLevelIcon }) { signalLevelIcons ->
-                        // These are only stackable if:
-                        // - They are cellular
-                        // - There's exactly two
-                        // - They have the same number of levels
-                        signalLevelIcons
-                            .filterIsInstance<SignalIconModel.CellularTypeIconModel.Cellular>()
-                            .let { it.size == 2 && it[0].numberOfLevels == it[1].numberOfLevels }
+    override val isStackable: StateFlow<Boolean> =
+        if (NewStatusBarIcons.isEnabled && StatusBarRootModernization.isEnabled) {
+            icons.flatMapLatest { iconsList ->
+                when {
+                    iconsList.isEmpty() -> flowOf(false)
+                    iconsList.size != 2 -> flowOf(false)
+                    else -> {
+                        combine(
+                            iconsList[0].disableStackedMobileIcons,
+                            iconsList[0].signalLevelIcon,
+                            iconsList[1].signalLevelIcon,
+                        ) { disableStacking, icon0, icon1 ->
+                            // These are only stackable if:
+                            // - Stacking hasn't been explicitly disabled
+                            // - They are cellular
+                            // - There's exactly two
+                            // - They have the same number of levels
+                            !disableStacking &&
+                                icon0 is SignalIconModel.CellularTypeIconModel.Cellular &&
+                                icon1 is SignalIconModel.CellularTypeIconModel.Cellular &&
+                                icon0.numberOfLevels == icon1.numberOfLevels
+                        }
                     }
                 }
             }
+            .stateIn(scope, SharingStarted.WhileSubscribed(), false)
         } else {
-            flowOf(false)
+            flowOf(false).stateIn(scope, SharingStarted.WhileSubscribed(), false)
         }
 
     /**

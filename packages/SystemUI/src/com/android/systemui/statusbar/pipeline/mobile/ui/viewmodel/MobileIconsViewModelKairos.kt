@@ -179,6 +179,7 @@ constructor(
             override val carrierNetworkChangeActive: State<Boolean> =
                 latest(false) { carrierNetworkChangeActive }
             override val shouldShowFourgIcon: State<Boolean> = latest(false) { shouldShowFourgIcon }
+            override val disableStackedMobileIcons: State<Boolean> = latest(false) { disableStackedMobileIcons }
         }
 
     private fun trackedCommonViewModel(subId: Int) =

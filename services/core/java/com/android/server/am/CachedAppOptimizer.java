@@ -121,6 +121,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumMap;
@@ -415,6 +417,7 @@ public class CachedAppOptimizer {
     static final int DEADLOCK_WATCHDOG_MSG = 7;
     static final int BINDER_ERROR_MSG = 8;
     static final int ZRAM_WRITEBACK_MSG = 9;
+    static final int COMPACT_APP_SWITCH_MSG = 9;
 
     // When free swap falls below this percentage threshold any full (file + anon)
     // compactions will be downgraded to file only compactions to reduce pressure
@@ -587,6 +590,9 @@ public class CachedAppOptimizer {
             OomAdjuster.DEFAULT_ZRAM_WRITEBACK_OOM_ADJ;
     @GuardedBy("mPhenotypeFlagLock")
     private volatile boolean mUseCompaction = DEFAULT_USE_COMPACTION;
+
+    private static final long APP_SWITCH_COMPACT_DELAY_MS = 10_000;
+
     private volatile boolean mUseFreezer = false; // set to DEFAULT in init()
     @GuardedBy("this")
     private int mFreezerDisableCount = 1; // Freezer is initially disabled, until enabled
@@ -1646,6 +1652,7 @@ public class CachedAppOptimizer {
                 // Remove any pending compaction we may have scheduled to happen while screen was
                 // off
                 cancelAllCompactions(CancelCompactReason.SCREEN_ON);
+                mCompactionHandler.removeMessages(COMPACT_APP_SWITCH_MSG);
             }
         }
     }
@@ -1694,6 +1701,14 @@ public class CachedAppOptimizer {
             // if the process moved out of cached state
             if (newAdj < oldAdj && newAdj < CACHED_APP_MIN_ADJ) {
                 cancelCompactionForProcess(app, CancelCompactReason.OOM_IMPROVEMENT);
+                mCompactionHandler.removeMessages(COMPACT_APP_SWITCH_MSG, app);
+            }
+
+            if (newAdj >= ProcessList.CACHED_APP_MIN_ADJ
+                    && oldAdj < ProcessList.CACHED_APP_MIN_ADJ) {
+                mCompactionHandler.sendMessageDelayed(
+                        mCompactionHandler.obtainMessage(COMPACT_APP_SWITCH_MSG, app),
+                        APP_SWITCH_COMPACT_DELAY_MS);
             }
         }
     }
@@ -1781,6 +1796,18 @@ public class CachedAppOptimizer {
     @VisibleForTesting
     void setKernelAllocationStatsForTest(@NonNull KernelAllocationStatsProvider provider) {
         mKernelAllocationStats = provider;
+    }
+
+    private boolean isSystemUnderHighLoad() {
+        try {
+            String loadStr = new String(
+                    Files.readAllBytes(Paths.get("/proc/loadavg")));
+            double oneMinLoad = Double.parseDouble(loadStr.split(" ")[0]);
+            int numCpus = Runtime.getRuntime().availableProcessors();
+            return (oneMinLoad / numCpus) > 0.8;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private static int getCompactionFlags(CompactProfile profile) {
@@ -2352,6 +2379,22 @@ public class CachedAppOptimizer {
                     maybeWritebackZram(data.app(), data.pid(), data.processName(),
                             data.packageName(), data.uid(), data.zramUsedDeltaKb(),
                             data.hasActivities());
+                    break;
+                }
+                case COMPACT_APP_SWITCH_MSG: {
+                    ProcessRecord proc = (ProcessRecord) msg.obj;
+                    if (isSystemUnderHighLoad()) {
+                        if (DEBUG_COMPACTION) {
+                            Slog.d(TAG_AM, "Skipping app-switch compaction for "
+                                    + proc.processName + " due to high CPU load");
+                        }
+                        break;
+                    }
+                    synchronized (mProcLock) {
+                        if (proc.getCurAdj() >= ProcessList.CACHED_APP_MIN_ADJ) {
+                            compactApp(proc, CompactProfile.ANON, CompactSource.APP, false);
+                        }
+                    }
                     break;
                 }
             }

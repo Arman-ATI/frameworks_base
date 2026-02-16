@@ -106,6 +106,15 @@ fun BatteryWithPercent(
             }
         }
 
+        if (viewModel.shouldShowBoltInTextMode) {
+            BasicText(
+                text = "\u26A1",
+                color = colorProducer,
+                style = textStyle,
+                maxLines = 1,
+            )
+        }
+
         if (showEstimate) {
             viewModel.batteryTimeRemainingEstimate?.let {
                 BasicText(

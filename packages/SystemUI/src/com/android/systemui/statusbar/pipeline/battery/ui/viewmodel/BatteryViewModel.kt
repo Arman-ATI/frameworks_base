@@ -66,6 +66,18 @@ sealed class BatteryViewModel(
     val isBatteryPercentInsideIconSettingEnabled: Boolean by
         interactor.showPercentInsideIcon.hydratedStateOf(initialValue = false)
 
+    val shouldShowBoltInTextMode: Boolean by
+    hydrator.hydratedStateOf(
+        traceName = "shouldShowBoltInTextMode",
+        initialValue = false,
+        source = combine(
+            interactor.batteryIconStyle.map { it == BatteryRepository.ICON_STYLE_TEXT },
+            interactor.isCharging
+        ) { isTextMode, charging ->
+            isTextMode && charging
+        }
+    )
+
     /** A [List<BatteryGlyph>] representation of the current [level] */
     private val levelGlyphs: Flow<List<BatteryGlyph>> =
         interactor.level.map { it?.glyphRepresentation() ?: emptyList() }

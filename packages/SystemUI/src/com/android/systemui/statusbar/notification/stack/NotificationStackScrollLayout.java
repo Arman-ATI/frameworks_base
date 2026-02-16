@@ -638,6 +638,30 @@ public class NotificationStackScrollLayout
         updateSplitNotificationShade();
     }
 
+    public void updateProgressBarIndeterminateRunning(boolean panelExpanding,
+            boolean qsExpanding) {
+        boolean shouldRun = !panelExpanding && !qsExpanding;
+        AxAmbientStateEx axAmbientStateEx = Dependency.get(AxAmbientStateEx.class);
+        if (shouldRun == axAmbientStateEx.isProgressBarIndeterminateAnimationRunning()) {
+            return;
+        }
+        axAmbientStateEx.setProgressBarIndeterminateAnimationRunning(shouldRun);
+        for (int i = 0; i < getChildCount(); i++) {
+            View child = getChildAt(i);
+            if (child instanceof ExpandableNotificationRow) {
+                ExpandableNotificationRow row = (ExpandableNotificationRow) child;
+                if (row.getPrivateLayout() != null) {
+                    row.getPrivateLayout()
+                            .setProgressBarIndeterminateAnimationRunning(shouldRun);
+                }
+                if (row.getPublicLayout() != null) {
+                    row.getPublicLayout()
+                            .setProgressBarIndeterminateAnimationRunning(shouldRun);
+                }
+            }
+        }
+    }
+
     private final ExpandableView.OnHeightChangedListener mOnChildHeightChangedListener =
             new ExpandableView.OnHeightChangedListener() {
                 @Override
@@ -4586,6 +4610,10 @@ public class NotificationStackScrollLayout
         SceneContainerFlag.assertInLegacyMode();
         if (mQSHeaderBoundsProvider == null) {
             return false;
+        AxAmbientStateEx axAmbientStateEx = Dependency.get(AxAmbientStateEx.class);
+        if (axAmbientStateEx.getSplitShadeEnabled()) {
+            return false;
+        }
         } else {
             mQSHeaderBoundsProvider.getBoundsOnScreenProvider().invoke(mQsHeaderBound);
         }
@@ -6901,6 +6929,8 @@ public class NotificationStackScrollLayout
 
     @Override
     protected void dispatchDraw(@NonNull Canvas canvas) {
+        AxAmbientStateEx axAmbientStateEx = Dependency.get(AxAmbientStateEx.class);
+        axAmbientStateEx.setSkipDrawNotificationRowCount(0);
         if (mBlurEffect != null) {
             spewLog("Applying blur RenderEffect to NotificationStackScrollLayout");
             // reuse the cached RenderNode to blur

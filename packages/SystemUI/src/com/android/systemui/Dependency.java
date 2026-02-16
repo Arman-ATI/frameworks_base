@@ -49,6 +49,7 @@ import com.android.systemui.statusbar.lockscreen.LockscreenSmartspaceController;
 import com.android.systemui.statusbar.notification.collection.render.GroupExpansionManager;
 import com.android.systemui.statusbar.notification.collection.render.GroupMembershipManager;
 import com.android.systemui.statusbar.notification.stack.AmbientState;
+import com.android.systemui.statusbar.notification.stack.AxAmbientStateEx;
 import com.android.systemui.statusbar.notification.stack.NotificationSectionsManager;
 import com.android.systemui.statusbar.phone.LightBarController;
 import com.android.systemui.statusbar.phone.ScreenOffAnimationController;
@@ -159,6 +160,7 @@ public class Dependency {
     @Inject Lazy<NotificationSectionsManager> mNotificationSectionsManagerLazy;
     @Inject Lazy<ScreenOffAnimationController> mScreenOffAnimationController;
     @Inject Lazy<AmbientState> mAmbientStateLazy;
+    @Inject Lazy<AxAmbientStateEx> mAxAmbientStateExLazy;
     @Inject Lazy<GroupMembershipManager> mGroupMembershipManagerLazy;
     @Inject Lazy<GroupExpansionManager> mGroupExpansionManagerLazy;
     @Inject Lazy<SystemUIDialogManager> mSystemUIDialogManagerLazy;
@@ -217,6 +219,7 @@ public class Dependency {
         mProviders.put(NotificationSectionsManager.class, mNotificationSectionsManagerLazy::get);
         mProviders.put(ScreenOffAnimationController.class, mScreenOffAnimationController::get);
         mProviders.put(AmbientState.class, mAmbientStateLazy::get);
+        mProviders.put(AxAmbientStateEx.class, mAxAmbientStateExLazy::get);
         mProviders.put(GroupMembershipManager.class, mGroupMembershipManagerLazy::get);
         mProviders.put(GroupExpansionManager.class, mGroupExpansionManagerLazy::get);
         mProviders.put(SystemUIDialogManager.class, mSystemUIDialogManagerLazy::get);

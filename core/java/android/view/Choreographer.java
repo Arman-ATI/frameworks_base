@@ -226,6 +226,7 @@ public final class Choreographer {
     private long mFrameIntervalNanos;
     private long mLastFrameIntervalNanos;
 
+    private boolean mEnableTraversalLast;
     private int mFPSDivisor = 1;
     private final DisplayEventReceiver.VsyncEventData mLastVsyncEventData =
             new DisplayEventReceiver.VsyncEventData();
@@ -311,7 +312,8 @@ public final class Choreographer {
      * @hide
      */
     private static final String[] CALLBACK_TRACE_TITLES = {
-            "input", "animation", "insets_animation", "traversal", "commit"
+            "input", "animation", "insets_animation", "traversal", "commit",
+            "traversal_last"
     };
 
     /**
@@ -362,7 +364,9 @@ public final class Choreographer {
      */
     public static final int CALLBACK_COMMIT = 4;
 
-    private static final int CALLBACK_LAST = CALLBACK_COMMIT;
+    /** @hide */
+    public static final int CALLBACK_TRAVERSAL_LAST = 5;
+    private static final int CALLBACK_LAST = CALLBACK_TRAVERSAL_LAST;
 
     private Choreographer(Looper looper) {
         this(looper, /* layerHandle */ 0L);
@@ -410,6 +414,14 @@ public final class Choreographer {
         return sThreadInstance.get();
     }
 
+    /** @hide */
+    public void setEnableTraversalLast(boolean enable) {
+        mEnableTraversalLast = enable;
+    }
+    /** @hide */
+    public boolean isEnableTraversalLast() {
+        return mEnableTraversalLast;
+    }
     /**
      * @hide
      * @deprecated Use vsync IDs with the regular Choreographer instead.
@@ -1208,6 +1220,9 @@ public final class Choreographer {
             mFrameInfo.markPerformTraversalsStart();
             doCallbacks(Choreographer.CALLBACK_TRAVERSAL);
 
+            if (mEnableTraversalLast) {
+                doCallbacks(Choreographer.CALLBACK_TRAVERSAL_LAST, frameIntervalNanos);
+            }
             doCallbacks(Choreographer.CALLBACK_COMMIT);
         } finally {
             AnimationUtils.unlockAnimationClock();
@@ -1227,6 +1242,10 @@ public final class Choreographer {
     }
 
     void doCallbacks(int callbackType) {
+        doCallbacks(callbackType, mLastFrameIntervalNanos);
+    }
+
+    void doCallbacks(int callbackType, long frameIntervalNanos) {
         CallbackRecord callbacks;
         long frameTimeNanos = mFrameData.mFrameTimeNanos;
         synchronized (mLock) {

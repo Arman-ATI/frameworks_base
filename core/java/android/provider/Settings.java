@@ -7693,6 +7693,12 @@ public final class Settings {
         public static final String SHOW_APP_VOLUME = "show_app_volume";
 
         /**
+         * Whether to show volume percentage in volume panel
+         * @hide
+         */
+        public static final String SHOW_VOLUME_PERCENTAGE = "show_volume_percentage";
+
+        /**
          * Whether to show charging animation
          * @hide
          */

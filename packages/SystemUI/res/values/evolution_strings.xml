@@ -131,4 +131,11 @@
     <string name="screenrecord_delete_label">Delete</string>
     <!-- A toast message shown after successfully deleting a screen recording [CHAR LIMIT=NONE] -->
     <string name="screenrecord_delete_description">Screen recording deleted</string>
+
+    <!-- Smart Pixels -->
+    <string name="quick_settings_smart_pixels_label">Smart Pixels</string>
+    <string name="quick_settings_smart_pixels_on">On</string>
+    <string name="quick_settings_smart_pixels_off">Off</string>
+    <string name="smart_pixels_percent_label">Pixel percentage</string>
+    <string name="smart_pixels_percent_format"><xliff:g id="percent" example="25">%d</xliff:g>%%</string>
 </resources>

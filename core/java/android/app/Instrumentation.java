@@ -82,6 +82,7 @@ import java.util.concurrent.TimeoutException;
 
 import com.android.internal.util.android.AttestationHooks;
 import com.android.internal.util.android.PixelPropsUtils;
+import com.android.internal.util.android.PerAppsPropsUtils;
 
 /**
  * Base class for implementing application instrumentation code.  When running
@@ -1366,6 +1367,7 @@ public class Instrumentation {
         app.attach(context);
         AttestationHooks.setProps(context);
         PixelPropsUtils.setProps(context);
+        PerAppsPropsUtils.setProps(context);
         return app;
     }
     
@@ -1386,6 +1388,7 @@ public class Instrumentation {
         app.attach(context);
         AttestationHooks.setProps(context);
         PixelPropsUtils.setProps(context);
+        PerAppsPropsUtils.setProps(context);
         return app;
     }
 

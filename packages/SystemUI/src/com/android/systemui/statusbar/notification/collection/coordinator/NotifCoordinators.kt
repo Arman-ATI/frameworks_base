@@ -135,6 +135,9 @@ constructor(
         }
         mOrderedSections.add(conversationCoordinator.priorityPeopleSectioner) // Priority People
         mOrderedSections.add(conversationCoordinator.peopleAlertingSectioner) // People Alerting
+        if (NotificationBundleUi.isEnabled) {
+            mOrderedSections.add(bundleCoordinator.essentialSectioner) // Essential
+        }
         mOrderedSections.add(rankingCoordinator.alertingSectioner) // Alerting
         mOrderedSections.add(rankingCoordinator.silentSectioner) // Silent
         mOrderedSections.add(rankingCoordinator.minimizedSectioner) // Minimized

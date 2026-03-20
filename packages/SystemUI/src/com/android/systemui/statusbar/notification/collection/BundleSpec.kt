@@ -23,6 +23,7 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import com.android.internal.R
 import com.android.systemui.statusbar.notification.stack.BUCKET_DYNAMIC_BUNDLE
+import com.android.systemui.statusbar.notification.stack.BUCKET_ESSENTIAL
 import com.android.systemui.statusbar.notification.stack.BUCKET_NEWS
 import com.android.systemui.statusbar.notification.stack.BUCKET_PROMO
 import com.android.systemui.statusbar.notification.stack.BUCKET_RECS
@@ -43,6 +44,18 @@ data class BundleSpec(
     val bundleType: Int,
 ) {
     companion object {
+        @JvmField
+        val ESSENTIAL_KEY = "ax_essential"
+
+        val ESSENTIAL =
+            BundleSpec(
+                key = ESSENTIAL_KEY,
+                titleText = com.android.systemui.res.R.string.essential_notifications_title,
+                summaryText = com.android.systemui.res.R.string.essential_notifications_summary,
+                icon = com.android.systemui.res.R.drawable.ic_important_outline,
+                bucket = BUCKET_ESSENTIAL,
+                bundleType = Adjustment.TYPE_OTHER,
+            )
         val PROMOTIONS =
             BundleSpec(
                 key = NotificationChannel.PROMOTIONS_ID,

@@ -16,6 +16,7 @@
 
 package com.android.server.graphics.fonts;
 
+import static com.android.server.graphics.fonts.FontManagerService.axFontFeatureSupport;
 import static com.android.server.graphics.fonts.FontManagerService.SystemFontException;
 
 import android.annotation.NonNull;
@@ -47,6 +48,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -72,6 +74,10 @@ final class UpdatableFontDir {
     private static final String EMOJI_DEFAULT_POSTSCRIPT_NAME = "NotoColorEmoji";
     // This is from frameworks/minikin/include/minikin/FontCollection.h
     private static final int MAX_FAMILY_COUNT = 254;
+
+    private static final File AX_FONT_BACKUP_DIR = new File("/data/system/ax_font_backup");
+    private static final File AX_FONT_BACKUP_FILES = new File(AX_FONT_BACKUP_DIR, "files");
+    private static final File AX_FONT_BACKUP_CONFIG = new File(AX_FONT_BACKUP_DIR, "config.xml");
 
     /** Interface to mock font file access in tests. */
     interface FontFileParser {
@@ -204,13 +210,38 @@ final class UpdatableFontDir {
 
             File[] dirs = mFilesDir.listFiles();
             if (dirs == null) {
-                // mFilesDir should be created by init script.
-                Slog.e(TAG, "Could not read: " + mFilesDir);
-                return;
+                if (restoreFromBackup()) {
+                    dirs = mFilesDir.listFiles();
+                }
+                if (dirs == null) {
+                    // mFilesDir should be created by init script.
+                    Slog.e(TAG, "Could not read: " + mFilesDir);
+                    return;
+                }
+            }
+
+            if (axFontFeatureSupport) {
+                boolean hasRandomDirs = false;
+                for (File dir : dirs) {
+                    if (dir.getName().startsWith(RANDOM_DIR_PREFIX)) {
+                        hasRandomDirs = true;
+                        break;
+                    }
+                }
+                if (!hasRandomDirs && restoreFromBackup()) {
+                    config = readPersistentConfig();
+                    mLastModifiedMillis = config.lastModifiedMillis;
+                    dirs = mFilesDir.listFiles();
+                    if (dirs == null) return;
+                }
             }
             FontConfig fontConfig = null;
             for (File dir : dirs) {
                 if (!dir.getName().startsWith(RANDOM_DIR_PREFIX)) {
+                    if (axFontFeatureSupport) {
+                        Slog.w(TAG, "Skipping unexpected dir: " + dir);
+                        continue;
+                    }
                     Slog.e(TAG, "Unexpected dir found: " + dir);
                     return;
                 }
@@ -393,6 +424,8 @@ final class UpdatableFontDir {
                 mFontFileInfoMap.clear();
                 mFontFileInfoMap.putAll(backupMap);
                 mLastModifiedMillis = backupLastModifiedDate;
+            } else {
+                backupFontFiles();
             }
         }
     }
@@ -601,14 +634,16 @@ final class UpdatableFontDir {
                         FontManager.RESULT_ERROR_FAILED_TO_WRITE_FONT_FILE,
                         "Failed to write font file to storage.", e);
             }
-            try {
-                // Do not parse font file before setting up fs-verity.
-                // setUpFsverity throws IOException if failed.
-                mFsverityUtil.setUpFsverity(tempNewFontFile.getAbsolutePath());
-            } catch (IOException e) {
-                throw new SystemFontException(
-                        FontManager.RESULT_ERROR_VERIFICATION_FAILURE,
-                        "Failed to setup fs-verity.", e);
+            if (!axFontFeatureSupport) {
+                try {
+                    // Do not parse font file before setting up fs-verity.
+                    // setUpFsverity throws IOException if failed.
+                    mFsverityUtil.setUpFsverity(tempNewFontFile.getAbsolutePath());
+                } catch (IOException e) {
+                    throw new SystemFontException(
+                            FontManager.RESULT_ERROR_VERIFICATION_FAILURE,
+                            "Failed to setup fs-verity.", e);
+                }
             }
             String fontFileName;
             try {
@@ -665,8 +700,9 @@ final class UpdatableFontDir {
             }
 
             FontConfig fontConfig = getSystemFontConfig();
-            if (!addFileToMapIfSameOrNewer(fontFileInfo, /* prioritizedFamily= */null, fontConfig,
-                    /* deleteOldFile= */ false)) {
+            if (axFontFeatureSupport) {
+                putFontFileInfo(fontFileInfo);
+            } else if (!addFileToMapIfSameOrNewer(fontFileInfo, fontConfig, false)) {
                 throw new SystemFontException(
                         FontManager.RESULT_ERROR_DOWNGRADING,
                         "Downgrading font file is forbidden.");
@@ -842,7 +878,7 @@ final class UpdatableFontDir {
                     "Font validation failed. Could not read PostScript name name: " + file);
         }
         long revision = getFontRevision(file);
-        if (revision == -1) {
+        if (revision == -1 && !axFontFeatureSupport) {
             throw new SystemFontException(
                     FontManager.RESULT_ERROR_INVALID_FONT_FILE,
                     "Font validation failed. Could not read font revision: " + file);
@@ -1138,5 +1174,88 @@ final class UpdatableFontDir {
             }
         }
         return count;
+    }
+
+    /* package */ static void deleteBackup() {
+        if (AX_FONT_BACKUP_DIR.exists()) {
+            FileUtils.deleteContentsAndDir(AX_FONT_BACKUP_DIR);
+        }
+    }
+
+    /* package */ void backupFontFiles() {
+        if (!axFontFeatureSupport) return;
+        try {
+            FileUtils.deleteContentsAndDir(AX_FONT_BACKUP_DIR);
+            AX_FONT_BACKUP_DIR.mkdirs();
+            AX_FONT_BACKUP_FILES.mkdirs();
+
+            File[] dirs = mFilesDir.listFiles();
+            if (dirs == null) return;
+            for (File dir : dirs) {
+                if (!dir.getName().startsWith(RANDOM_DIR_PREFIX)) continue;
+                File destDir = new File(AX_FONT_BACKUP_FILES, dir.getName());
+                destDir.mkdirs();
+                File[] files = dir.listFiles();
+                if (files == null) continue;
+                for (File file : files) {
+                    Files.copy(file.toPath(),
+                            new File(destDir, file.getName()).toPath(),
+                            StandardCopyOption.REPLACE_EXISTING);
+                }
+            }
+
+            File configSrc = mConfigFile.getBaseFile();
+            if (configSrc.exists()) {
+                Files.copy(configSrc.toPath(), AX_FONT_BACKUP_CONFIG.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING);
+            }
+            Slog.i(TAG, "Font backup created successfully");
+        } catch (IOException e) {
+            Slog.e(TAG, "Failed to backup font files", e);
+        }
+    }
+
+    /* package */ boolean restoreFromBackup() {
+        if (!axFontFeatureSupport) return false;
+        if (!AX_FONT_BACKUP_DIR.exists() || !AX_FONT_BACKUP_FILES.exists()) return false;
+
+        File[] backupDirs = AX_FONT_BACKUP_FILES.listFiles();
+        if (backupDirs == null || backupDirs.length == 0) return false;
+
+        try {
+            mFilesDir.mkdirs();
+
+            for (File backupDir : backupDirs) {
+                if (!backupDir.isDirectory()) continue;
+                File destDir = new File(mFilesDir, backupDir.getName());
+                destDir.mkdirs();
+                Os.chmod(destDir.getAbsolutePath(), 0711);
+                File[] files = backupDir.listFiles();
+                if (files == null) continue;
+                for (File file : files) {
+                    File dest = new File(destDir, file.getName());
+                    Files.copy(file.toPath(), dest.toPath(),
+                            StandardCopyOption.REPLACE_EXISTING);
+                    if (file.getName().equals(FONT_SIGNATURE_FILE)) {
+                        Os.chmod(dest.getAbsolutePath(), 0600);
+                    } else {
+                        Os.chmod(dest.getAbsolutePath(), 0644);
+                    }
+                }
+            }
+
+            File configDest = mConfigFile.getBaseFile();
+            configDest.getParentFile().mkdirs();
+            if (AX_FONT_BACKUP_CONFIG.exists()) {
+                Files.copy(AX_FONT_BACKUP_CONFIG.toPath(), configDest.toPath(),
+                        StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            Slog.i(TAG, "Font files restored from backup");
+            return true;
+        } catch (IOException | ErrnoException e) {
+            Slog.e(TAG, "Failed to restore font files from backup", e);
+            return false;
+        }
     }
 }

@@ -39,6 +39,7 @@ import com.android.internal.logging.MetricsLogger;
 import com.android.internal.logging.UiEventLogger;
 import com.android.internal.statusbar.IStatusBarService;
 import com.android.systemui.Flags;
+import com.android.systemui.applocker.AxAppLockerHelper;
 import com.android.systemui.flags.FeatureFlagsClassic;
 import com.android.systemui.plugins.FalsingManager;
 import com.android.systemui.plugins.PluginManager;
@@ -126,6 +127,7 @@ public class ExpandableNotificationRowController implements NotifViewController 
     private final EntryAdapterFactory mEntryAdapterFactory;
     private final WindowRootViewBlurInteractor mWindowRootViewBlurInteractor;
     private final NotificationActivityStarter mNotificationActivityStarter;
+    private final AxAppLockerHelper mAxAppLockerHelper;
     private final NotificationUiEligibilityChecker mNotificationUiEligibilityChecker;
     private final Optional<AutomationNotificationBackgroundProvider>
             mAutomationNotificationBackgroundProvider;
@@ -295,6 +297,7 @@ public class ExpandableNotificationRowController implements NotifViewController 
             WindowRootViewBlurInteractor windowRootViewBlurInteractor,
             BundleInteractionLogger bundleInteractionLogger,
             NotificationActivityStarter notificationActivityStarter,
+            AxAppLockerHelper axAppLockerHelper,
             NotificationUiEligibilityChecker notificationUiEligibilityChecker,
             Optional<AutomationNotificationBackgroundProvider>
                     automationNotificationBackgroundProvider) {
@@ -336,6 +339,7 @@ public class ExpandableNotificationRowController implements NotifViewController 
         mWindowRootViewBlurInteractor = windowRootViewBlurInteractor;
         mBundleInteractionLogger = bundleInteractionLogger;
         mNotificationActivityStarter = notificationActivityStarter;
+        mAxAppLockerHelper = axAppLockerHelper;
         mNotificationUiEligibilityChecker = notificationUiEligibilityChecker;
         mAutomationNotificationBackgroundProvider = automationNotificationBackgroundProvider;
     }
@@ -402,6 +406,7 @@ public class ExpandableNotificationRowController implements NotifViewController 
                 mNotificationRebindingTracker,
                 mBundleInteractionLogger,
                 mNotificationActivityStarter,
+                mAxAppLockerHelper,
                 mNotificationUiEligibilityChecker,
                 mAutomationNotificationBackgroundProvider);
         mView.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);

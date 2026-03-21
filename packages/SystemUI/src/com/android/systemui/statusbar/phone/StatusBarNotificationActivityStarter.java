@@ -92,6 +92,8 @@ import com.android.systemui.statusbar.policy.KeyguardStateController;
 import com.android.systemui.wmshell.BubblesManager;
 import com.android.wm.shell.shared.bubbles.logging.BubbleLog;
 
+import com.android.systemui.applocker.AxAppLockerHelper;
+
 import dagger.Lazy;
 
 import kotlinx.coroutines.CoroutineScope;
@@ -165,6 +167,7 @@ public class StatusBarNotificationActivityStarter implements NotificationActivit
     private final UserTracker mUserTracker;
     private final FrameworkStatsLogWrapper mFrameworkStatsLogWrapper;
     private final OnUserInteractionCallback mOnUserInteractionCallback;
+    private final AxAppLockerHelper mAxAppLockerHelper;
 
     private boolean mIsCollapsingToShowActivityOverLockscreen;
 
@@ -206,6 +209,7 @@ public class StatusBarNotificationActivityStarter implements NotificationActivit
             LaunchFullScreenIntentProvider launchFullScreenIntentProvider,
             PowerInteractor powerInteractor,
             UserTracker userTracker,
+            AxAppLockerHelper axAppLockerHelper,
             FrameworkStatsLogWrapper frameworkStatsLogWrapper) {
         mContext = context;
         mContextInteractor = contextInteractor;
@@ -242,6 +246,7 @@ public class StatusBarNotificationActivityStarter implements NotificationActivit
         mNotificationAnimationProvider = notificationAnimationProvider;
         mPowerInteractor = powerInteractor;
         mUserTracker = userTracker;
+        mAxAppLockerHelper = axAppLockerHelper;
         mFrameworkStatsLogWrapper = frameworkStatsLogWrapper;
 
         launchFullScreenIntentProvider.registerListener(entry -> launchFullScreenIntent(entry));
@@ -282,6 +287,12 @@ public class StatusBarNotificationActivityStarter implements NotificationActivit
     @Override
     public void onNotificationClicked(@NonNull NotificationEntry entry,
             @NonNull ExpandableNotificationRow row) {
+        String packageName = entry.getSbn().getPackageName();
+        if (mAxAppLockerHelper.isAppLockedWithoutCache(packageName)) {
+            int userId = entry.getSbn().getUserId();
+            mAxAppLockerHelper.promptUnlock(packageName, userId);
+            return;
+        }
         mLogger.logStartingActivityFromClick(entry, row.isHeadsUpState(),
                 mKeyguardStateController.isVisible(),
                 mNotificationShadeWindowController.getPanelExpanded());

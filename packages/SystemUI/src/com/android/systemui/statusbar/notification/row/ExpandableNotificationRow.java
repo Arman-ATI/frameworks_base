@@ -148,6 +148,8 @@ import com.android.systemui.util.DumpUtilsKt;
 import com.android.systemui.util.ListenerSet;
 import com.android.wm.shell.shared.animation.PhysicsAnimator;
 
+import com.android.systemui.applocker.AxAppLockerHelper;
+
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -208,6 +210,7 @@ public class ExpandableNotificationRow extends ActivatableNotificationView
     private RowContentBindStage mRowContentBindStage;
     private PeopleNotificationIdentifier mPeopleNotificationIdentifier;
     private NotificationActivityStarter mNotificationActivityStarter;
+    private AxAppLockerHelper mAxAppLockerHelper;
     private MetricsLogger mMetricsLogger;
     private NotificationChildrenContainerLogger mChildrenContainerLogger;
     private ColorUpdateLogger mColorUpdateLogger;
@@ -404,6 +407,10 @@ public class ExpandableNotificationRow extends ActivatableNotificationView
     }
 
     private void toggleExpansionState(View v, boolean shouldLogExpandClickMetric) {
+        if (isNotificationAppLocked()) {
+            promptAppUnlock();
+            return;
+        }
         if (isBundle()
             || (!shouldShowPublic() && (!mIsMinimized || isExpanded()) && isGroupRoot() && !NTForbiddenSwipeDownQSController.get(mContext).getForbiddenSwipeDownQS())) {
             mGroupExpansionChanging = true;
@@ -445,6 +452,19 @@ public class ExpandableNotificationRow extends ActivatableNotificationView
                 mMetricsLogger.action(MetricsEvent.ACTION_NOTIFICATION_EXPANDER, nowExpanded);
             }
         }
+    }
+
+    private boolean isNotificationAppLocked() {
+        if (mEntry == null || mEntry.getSbn() == null) return false;
+        String packageName = mEntry.getSbn().getPackageName();
+        return mAxAppLockerHelper.isAppLocked(packageName);
+    }
+
+    private void promptAppUnlock() {
+        if (mEntry == null || mEntry.getSbn() == null) return;
+        String packageName = mEntry.getSbn().getPackageName();
+        int userId = mEntry.getSbn().getUserId();
+        mAxAppLockerHelper.promptUnlock(packageName, userId);
     }
 
     private boolean mKeepInParentForDismissAnimation;
@@ -2174,6 +2194,7 @@ public class ExpandableNotificationRow extends ActivatableNotificationView
             NotificationRebindingTracker notificationRebindingTracker,
             BundleInteractionLogger bundleInteractionLogger,
             NotificationActivityStarter notificationActivityStarter,
+            AxAppLockerHelper axAppLockerHelper,
             NotificationUiEligibilityChecker notificationUiEligibilityChecker,
             Optional<AutomationNotificationBackgroundProvider>
                     automationNotificationBackgroundProvider) {
@@ -2188,6 +2209,7 @@ public class ExpandableNotificationRow extends ActivatableNotificationView
         mAppName = appName;
         mRebindingTracker = notificationRebindingTracker;
         mNotificationActivityStarter = notificationActivityStarter;
+        mAxAppLockerHelper = axAppLockerHelper;
         if (mMenuRow == null) {
             mMenuRow = new NotificationMenuRow(
                     mContext, peopleNotificationIdentifier, mNotificationActivityStarter);
@@ -3458,7 +3480,7 @@ public class ExpandableNotificationRow extends ActivatableNotificationView
             return;
         }
         boolean oldShowingPublic = mShowingPublic;
-        mShowingPublic = mSensitive && hideSensitive;
+        mShowingPublic = (mSensitive && hideSensitive) || isNotificationAppLocked();
         boolean isShowingLayoutNotChanged = mShowingPublic == oldShowingPublic;
         if (mShowingPublicInitialized && isShowingLayoutNotChanged) {
             return;
@@ -3574,6 +3596,9 @@ public class ExpandableNotificationRow extends ActivatableNotificationView
     }
 
     private boolean shouldShowPublic() {
+        if (isNotificationAppLocked()) {
+            return true;
+        }
         return mSensitive && mHideSensitiveForIntrinsicHeight;
     }
 

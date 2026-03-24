@@ -38,6 +38,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.RemoteException;
 import android.os.UserHandle;
+import android.provider.Settings;
 import android.service.dreams.IDreamManager;
 import android.service.notification.StatusBarNotification;
 import android.text.TextUtils;
@@ -467,10 +468,17 @@ public class StatusBarNotificationActivityStarter implements NotificationActivit
                     remoteInputText.toString());
         }
         final boolean canBubble = entry.canBubble();
-        if (canBubble) {
+        boolean forceBubbleApps = Settings.System.getIntForUser(mContext.getContentResolver(),
+                "notification_bubble_apps", 0, UserHandle.USER_CURRENT) == 1;
+
+        if (canBubble || forceBubbleApps) {
             mLogger.logExpandingBubble(entry);
             removeHunAfterClick(row);
-            expandBubbleStackOnMainThread(entry);
+            if (forceBubbleApps && !entry.isBubble()) {
+                expandAppBubbleStackOnMainThread(intent, entry.getSbn().getUser());
+            } else {
+                expandBubbleStackOnMainThread(entry);
+            }
         } else {
             startNotificationIntent(intent, fillInIntent, entry, row, animate, isActivityIntent);
         }
@@ -584,6 +592,23 @@ public class StatusBarNotificationActivityStarter implements NotificationActivit
             mLogger.logSendPendingIntent(entry, intent, result);
             return result;
         }
+    }
+
+    private void expandAppBubbleStackOnMainThread(PendingIntent intent, UserHandle user) {
+        if (!mBubblesManagerOptional.isPresent()) {
+            return;
+        }
+
+        if (Looper.getMainLooper().isCurrentThread()) {
+            expandAppBubbleStack(intent, user);
+        } else {
+            mMainThreadHandler.post(() -> expandAppBubbleStack(intent, user));
+        }
+    }
+
+    private void expandAppBubbleStack(PendingIntent intent, UserHandle user) {
+        mBubblesManagerOptional.get().expandStackAndSelectBubble(intent, user);
+        mShadeController.collapseShade();
     }
 
     private void startNotificationIntent(

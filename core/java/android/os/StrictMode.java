@@ -2305,12 +2305,18 @@ public final class StrictMode {
         }
     }
 
+    private static volatile BackgroundActivityLaunchCallback sBackgroundActivityLaunchCallback;
+
     private static void registerBackgroundActivityLaunchCallback() {
+        if (sBackgroundActivityLaunchCallback != null) {
+            return;
+        }
+        sBackgroundActivityLaunchCallback = new BackgroundActivityLaunchCallback();
         try {
             IActivityTaskManager service = ActivityTaskManager.getService();
             if (service != null) {
                 service.registerBackgroundActivityStartCallback(
-                        BACKGROUND_ACTIVITY_LAUNCH_CALLBACK);
+                    sBackgroundActivityLaunchCallback);
             }
         } catch (DeadObjectException e) {
             // ignore

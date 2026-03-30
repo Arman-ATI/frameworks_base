@@ -576,6 +576,7 @@ android_library {
         "FadingEdgeLayoutLib",
         "smartspace-proto-java",
         "smartspace-proto-lite-java",
+        "ax_compose",
     ],
     enable_ksp: true,
     annotation_processor_flags: [

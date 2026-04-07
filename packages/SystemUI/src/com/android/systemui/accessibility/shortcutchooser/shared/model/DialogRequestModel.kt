@@ -22,4 +22,9 @@ import com.android.internal.accessibility.common.ShortcutConstants.UserShortcutT
 data class DialogRequestModel(
     @param:UserShortcutType val shortcutType: Int,
     val displayId: Int,
+    val resolutionMode: Int = 0,
+    val fpsMode: Int = 0,
+    val timeLimitMs: Int = 0,
+    val fileSizeBytes: Long = 0L,
+    val bitrateMultiplier: Float = 1.0f,
 )

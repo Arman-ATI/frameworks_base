@@ -89,6 +89,8 @@ bool Properties::clipSurfaceViews = false;
 bool Properties::hdr10bitPlus = false;
 bool Properties::skipTelemetry = false;
 
+bool Properties::traceEachFrame = false;
+
 int Properties::timeoutMultiplier = 1;
 
 bool Properties::bitmapAshmemLongName = false;
@@ -171,6 +173,9 @@ bool Properties::load() {
                                           hwui_flags::skip_eglmanager_telemetry());
 
     bitmapAshmemLongName = base::GetBoolProperty(PROPERTY_BITMAP_ASHMEM_LONG_NAME, false);
+
+    traceEachFrame = base::GetBoolProperty(PROPERTY_TRACE_EACH_FRAME, false);
+
     return (prevDebugLayersUpdates != debugLayersUpdates) || (prevDebugOverdraw != debugOverdraw);
 }
 

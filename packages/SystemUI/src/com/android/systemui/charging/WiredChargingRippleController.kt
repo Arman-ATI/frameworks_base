@@ -24,6 +24,8 @@ import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
 import android.os.SystemProperties
+import android.os.UserHandle
+import android.provider.Settings
 import android.view.Gravity
 import android.view.Surface
 import android.view.View
@@ -53,8 +55,11 @@ private const val MAX_DEBOUNCE_LEVEL = 3
 private const val BASE_DEBOUNCE_TIME = 2000
 
 /**
- * Controls the ripple effect that shows when wired charging begins. The ripple uses the accent
- * color of the current theme.
+ * Wired plug-in charging feedback: AOSP [RippleView] or custom [AXRippleView] / [AXChargingCircleView]
+ * per [R.bool.config_useCustomChargingAnim]. Independent of [com.android.systemui.charging.WirelessChargingAnimation]
+ * (driven from power [com.android.server.power.Notifier]).
+ *
+ * Both paths honor [Settings.System.CHARGING_ANIMATION] like the notifier-driven animation.
  */
 @SysUISingleton
 class WiredChargingRippleController
@@ -178,11 +183,23 @@ constructor(
     }
 
     fun startRipple() {
+        if (!isChargingAnimationSettingEnabled()) {
+            return
+        }
         if (context.resources.getBoolean(R.bool.config_useCustomChargingAnim)) {
             startCustomRipple()
         } else {
             startAospRipple()
         }
+    }
+
+    private fun isChargingAnimationSettingEnabled(): Boolean {
+        return Settings.System.getIntForUser(
+            context.contentResolver,
+            Settings.System.CHARGING_ANIMATION,
+            1,
+            UserHandle.USER_CURRENT
+        ) == 1
     }
 
     private fun startAospRipple() {

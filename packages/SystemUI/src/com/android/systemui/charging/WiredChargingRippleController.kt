@@ -29,6 +29,7 @@ import android.provider.Settings
 import android.view.Gravity
 import android.view.Surface
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.TextView
@@ -202,6 +203,31 @@ constructor(
         ) == 1
     }
 
+    /** Removes [child] from its parent if still present (animation end can race with teardown). */
+    private fun removeChildFromParentIfPresent(child: View) {
+        val parent = child.parent as? ViewGroup ?: return
+        try {
+            parent.removeView(child)
+        } catch (_: IllegalStateException) {
+            // Already removed from parent.
+        }
+    }
+
+    /**
+     * Removes a window overlay only if it is still attached. The ripple animation end callback
+     * can run after the view was already removed (rapid plug cycles, display changes, etc.).
+     */
+    private fun safeRemoveWindowOverlay(root: View) {
+        if (!root.isAttachedToWindow) {
+            return
+        }
+        try {
+            windowManager.removeView(root)
+        } catch (_: IllegalArgumentException) {
+            // WindowManagerGlobal: "not attached to window manager"
+        }
+    }
+
     private fun startAospRipple() {
         if (rippleView.rippleInProgress() || rippleView.parent != null) {
             // Skip if ripple is still playing, or not playing but already added the parent
@@ -229,14 +255,15 @@ constructor(
             FrameLayout.LayoutParams.MATCH_PARENT
         ).apply { gravity = Gravity.CENTER })
 
-        container.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+        // Attach listener on rippleView so it runs when the overlay is shown (child attaches with container).
+        rippleView.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
             override fun onViewDetachedFromWindow(view: View) {}
 
             override fun onViewAttachedToWindow(view: View) {
                 layoutRipple()
                 rippleView.startRipple(Runnable {
-                    container.removeView(rippleView)
-                    windowManager.removeView(container)
+                    removeChildFromParentIfPresent(rippleView)
+                    safeRemoveWindowOverlay(container)
                 })
                 val fadeIn = ObjectAnimator.ofFloat(percentText, "alpha", 0f, 1f).apply {
                     duration = 300
@@ -250,7 +277,7 @@ constructor(
                     playTogether(fadeIn, fadeOut)
                     start()
                 }
-                container.removeOnAttachStateChangeListener(this)
+                rippleView.removeOnAttachStateChangeListener(this)
             }
         })
         windowManager.addView(container, windowLayoutParams)
@@ -280,7 +307,7 @@ constructor(
 
             override fun onViewAttachedToWindow(view: View) {
                 axRippleView.startRipple(Runnable {
-                    windowManager.removeView(axRippleView)
+                    safeRemoveWindowOverlay(axRippleView)
                 })
                 axRippleView.removeOnAttachStateChangeListener(this)
             }
@@ -304,7 +331,7 @@ constructor(
 
             override fun onViewAttachedToWindow(view: View) {
                 axChargingCircleView.startAnimation(Runnable {
-                    windowManager.removeView(axChargingCircleView)
+                    safeRemoveWindowOverlay(axChargingCircleView)
                 })
                 axChargingCircleView.removeOnAttachStateChangeListener(this)
             }

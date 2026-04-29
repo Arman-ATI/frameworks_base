@@ -3459,7 +3459,7 @@ public class AppOpsService extends IAppOpsService.Stub {
         } catch (SecurityException e) {
             logVerifyAndGetBypassFailure(uid, e, "noteOperation");
             // TODO(b/333931259): Remove extra logging after this issue is diagnosed.
-            if (code == OP_BLUETOOTH_CONNECT) {
+            if (DEBUG && code == OP_BLUETOOTH_CONNECT) {
                 Slog.e(TAG, "noting OP_BLUETOOTH_CONNECT returned MODE_ERRORED as"
                         + " verifyAndGetBypass returned a SecurityException for package: "
                         + packageName + " and uid: " + uid + " and attributionTag: "
@@ -4268,10 +4268,12 @@ public class AppOpsService extends IAppOpsService.Stub {
                 attributionTag = null;
             }
         } catch (SecurityException e) {
-            if (Process.isIsolated(uid)) {
-                Slog.e(TAG, "Cannot startOperation: isolated process");
-            } else {
-                Slog.e(TAG, "Cannot startOperation", e);
+            if (DEBUG) {
+                if (Process.isIsolated(uid)) {
+                    Slog.e(TAG, "Cannot startOperation: isolated process");
+                } else {
+                    Slog.e(TAG, "Cannot startOperation", e);
+                }
             }
             return new SyncNotedAppOp(AppOpsManager.MODE_ERRORED, code, attributionTag,
                     packageName);
@@ -5297,6 +5299,9 @@ public class AppOpsService extends IAppOpsService.Stub {
 
     private void logVerifyAndGetBypassFailure(int uid, @NonNull SecurityException e,
             @NonNull String methodName) {
+        if (!DEBUG) {
+            return;
+        }
         if (Process.isIsolated(uid)) {
             Slog.e(TAG, "Cannot " + methodName + ": isolated UID");
         } else if (UserHandle.getAppId(uid) < Process.FIRST_APPLICATION_UID) {

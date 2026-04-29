@@ -934,7 +934,9 @@ class ActivityStarter {
                     res = executeRequest(mRequest);
                 } finally {
                     Binder.restoreCallingIdentity(origId);
-                    logResult(res);
+                    if (DEBUG_RESULTS) {
+                        logResult(res);
+                    }
                 }
 
                 if (globalConfigWillChange) {
@@ -3119,8 +3121,10 @@ class ActivityStarter {
                 // This activity is not being started from another...  in this
                 // case we -always- start a new task.
                 if ((mLaunchFlags & FLAG_ACTIVITY_NEW_TASK) == 0 && mInTask == null) {
-                    Slog.w(TAG, "startActivity called from non-Activity context; forcing " +
-                            "Intent.FLAG_ACTIVITY_NEW_TASK for: " + mIntent);
+                    if (DEBUG_RESULTS) {
+                        Slog.w(TAG, "startActivity called from non-Activity context; forcing "
+                                + "Intent.FLAG_ACTIVITY_NEW_TASK for: " + mIntent);
+                    }
                     mLaunchFlags |= FLAG_ACTIVITY_NEW_TASK;
                 }
             } else if (mSourceRecord.launchMode == LAUNCH_SINGLE_INSTANCE) {

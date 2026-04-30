@@ -2355,6 +2355,7 @@ public final class SystemServiceRegistry {
                 case Context.VIRTUAL_DEVICE_SERVICE:
                 case Context.PERSISTENT_DATA_BLOCK_SERVICE:
                 case Context.OEM_LOCK_SERVICE:
+                case Context.AX_SANDBOX_SERVICE:
                     return null;
                 case Context.DROPBOX_SERVICE:
                     // If the Dropbox service is missing, we don't want to trigger a WTF, because

@@ -213,6 +213,8 @@ public class StatusBarManagerService extends IStatusBarService.Stub implements D
     private int mCurrentUserId;
     private boolean mTracingEnabled;
     private int mLastSystemKey = -1;
+    private volatile boolean mLastTopAppHidesStatusBar;
+    private volatile boolean mLastTopAppHidesStatusBarValid;
 
     private final TileRequestTracker mTileRequestTracker;
 
@@ -234,6 +236,7 @@ public class StatusBarManagerService extends IStatusBarService.Stub implements D
         public void binderDied() {
             mBar.asBinder().unlinkToDeath(this,0);
             mBar = null;
+            mLastTopAppHidesStatusBarValid = false;
             notifyBarAttachChanged();
         }
 
@@ -1535,6 +1538,7 @@ public class StatusBarManagerService extends IStatusBarService.Stub implements D
 
         Slog.i(TAG, "registerStatusBar bar=" + bar);
         mBar = bar;
+        mLastTopAppHidesStatusBarValid = false;
         mDeathRecipient.linkToDeath();
         notifyBarAttachChanged();
         final ArrayMap<String, StatusBarIcon> icons;
@@ -1559,6 +1563,7 @@ public class StatusBarManagerService extends IStatusBarService.Stub implements D
 
         Slog.i(TAG, "registerStatusBarForAllDisplays bar=" + bar);
         mBar = bar;
+        mLastTopAppHidesStatusBarValid = false;
         mDeathRecipient.linkToDeath();
         notifyBarAttachChanged();
 

@@ -40,7 +40,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.android.app.tracing.coroutines.launchTraced as launch
 import com.android.keyguard.AuthInteractionProperties
 import com.android.systemui.Flags
-import com.android.systemui.Flags.msdlFeedback
 import com.android.systemui.common.ui.ConfigurationState
 import com.android.systemui.common.ui.view.onApplyWindowInsets
 import com.android.systemui.common.ui.view.onLayoutChanged
@@ -145,17 +144,11 @@ object KeyguardRootViewBinder {
                             deviceEntryHapticsInteractor.playSuccessHapticOnDeviceEntry.collect {
                                 if (!isFpHapticEnabled(context, Settings.System.FP_SUCCESS_VIBRATE)) return@collect
 
-                                val playedMsdl = msdlFeedback() && (msdlPlayer?.let {
-                                    it.playToken(MSDLToken.UNLOCK, authInteractionProperties)
-                                    true
-                                } == true)
-
-                                if (!playedMsdl) {
-                                    vibratorHelper.performHapticFeedback(
-                                        view,
-                                        HapticFeedbackConstants.BIOMETRIC_CONFIRM
-                                    )
-                                }
+                                vibratorHelper.performHapticFeedback(
+                                    view,
+                                    HapticFeedbackConstants.BIOMETRIC_CONFIRM,
+                                    HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
+                                )
                             }
                         }
 
@@ -163,17 +156,11 @@ object KeyguardRootViewBinder {
                             deviceEntryHapticsInteractor.playErrorHaptic.collect {
                                 if (!isFpHapticEnabled(context, Settings.System.FP_ERROR_VIBRATE)) return@collect
 
-                                val playedMsdl = msdlFeedback() && (msdlPlayer?.let {
-                                    it.playToken(MSDLToken.FAILURE, authInteractionProperties)
-                                    true
-                                } == true)
-
-                                if (!playedMsdl) {
-                                    vibratorHelper.performHapticFeedback(
-                                        view,
-                                        HapticFeedbackConstants.BIOMETRIC_REJECT
-                                    )
-                                }
+                                vibratorHelper.performHapticFeedback(
+                                    view,
+                                    HapticFeedbackConstants.BIOMETRIC_REJECT,
+                                    HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
+                                )
                             }
                         }
                     }

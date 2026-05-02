@@ -17,12 +17,14 @@
 
 package com.android.systemui.power.domain.interactor
 
+import android.graphics.Point
 import android.os.PowerManager
 import com.android.systemui.camera.CameraGestureHelper
 import com.android.systemui.classifier.FalsingCollector
 import com.android.systemui.classifier.FalsingCollectorActual
 import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.deviceentry.domain.interactor.DeviceEntryInteractor
+import com.android.systemui.keyguard.data.repository.KeyguardRepository
 import com.android.systemui.log.table.TableLogBuffer
 import com.android.systemui.log.table.logDiffsForTable
 import com.android.systemui.plugins.statusbar.StatusBarStateController
@@ -59,6 +61,7 @@ constructor(
     private val cameraGestureHelper: Provider<CameraGestureHelper?>,
     // Unused if Flexiglass is disabled.
     private val deviceEntryInteractor: Lazy<DeviceEntryInteractor?> = Lazy { null },
+    private val keyguardRepository: KeyguardRepository,
 ) {
     /** Whether the screen is on or off. */
     val isInteractive: StateFlow<Boolean> = repository.isInteractive
@@ -142,6 +145,10 @@ constructor(
      */
     fun onUserTouch(noChangeLights: Boolean = false) =
         repository.userTouch(noChangeLights = noChangeLights)
+
+    fun setLastTouchToSleepPosition(x: Float, y: Float) {
+        keyguardRepository.setLastTouchToSleepPosition(Point(x.toInt(), y.toInt()))
+    }
 
     /**
      * Wakes up the device if the device was dozing.

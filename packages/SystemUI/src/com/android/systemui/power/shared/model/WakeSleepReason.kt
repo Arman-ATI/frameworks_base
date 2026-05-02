@@ -63,7 +63,9 @@ enum class WakeSleepReason(
     FOLD(isTouch = false, PowerManager.GO_TO_SLEEP_REASON_DEVICE_FOLD),
 
     /** Device goes to sleep because it timed out. */
-    TIMEOUT(isTouch = false, PowerManager.GO_TO_SLEEP_REASON_TIMEOUT);
+    TIMEOUT(isTouch = false, PowerManager.GO_TO_SLEEP_REASON_TIMEOUT),
+
+    TOUCH_TO_SLEEP(isTouch = true, PowerManager.GO_TO_SLEEP_REASON_TOUCH);
 
     companion object {
         fun fromPowerManagerWakeReason(reason: Int): WakeSleepReason {
@@ -88,6 +90,7 @@ enum class WakeSleepReason(
                 PowerManager.GO_TO_SLEEP_REASON_TIMEOUT -> TIMEOUT
                 PowerManager.GO_TO_SLEEP_REASON_DEVICE_FOLD -> FOLD
                 PowerManager.GO_TO_SLEEP_REASON_LID_SWITCH -> LID_CLOSE
+                PowerManager.GO_TO_SLEEP_REASON_TOUCH -> TOUCH_TO_SLEEP
                 else -> OTHER
             }
         }

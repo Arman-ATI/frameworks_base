@@ -20,11 +20,13 @@ import com.android.systemui.dagger.SysUISingleton
 import com.android.systemui.dagger.qualifiers.Main
 import com.android.systemui.display.domain.interactor.DisplayStateInteractor
 import com.android.systemui.keyguard.WakefulnessLifecycle
+import com.android.systemui.res.R
 import com.android.systemui.shade.ShadeViewController
 import com.android.systemui.shade.domain.interactor.ShadeLockscreenInteractor
 import com.android.systemui.statusbar.LiftReveal
 import com.android.systemui.statusbar.LightRevealEffect
 import com.android.systemui.statusbar.LightRevealScrim
+import com.android.systemui.statusbar.PowerButtonReveal
 import com.android.systemui.statusbar.NotificationShadeWindowController
 import com.android.systemui.statusbar.StatusBarState
 import com.android.systemui.statusbar.StatusBarStateControllerImpl
@@ -99,10 +101,12 @@ constructor(
                     }
 
                     override fun onAnimationStart(animation: Animator) {
-                        if (dozeParameters.get().isMinModeActive()) {
-                            lightRevealScrim.revealEffect = LiftReveal
-                        } else {
-                            lightRevealScrim.revealEffect = revealEffect
+                        if (!ambientAod()) {
+                            if (dozeParameters.get().isMinModeActive()) {
+                                lightRevealScrim.revealEffect = LiftReveal
+                            } else {
+                                lightRevealScrim.revealEffect = revealEffect
+                            }
                         }
                         interactionJankMonitor.begin(
                             notifShadeWindowControllerLazy.get().windowRootView,
@@ -189,6 +193,15 @@ constructor(
                 lightRevealAnimator.setDuration(LIGHT_REVEAL_ANIMATION_DURATION)
             } else {
                 lightRevealAnimator.setDuration(LIGHT_REVEAL_ANIMATION_DURATION_MINMODE)
+            }
+
+            if (wakefulnessLifecycle.lastSleepReason == PowerManager.GO_TO_SLEEP_REASON_POWER_BUTTON) {
+                val powerButtonY = context.resources.getDimensionPixelSize(
+                    R.dimen.physical_power_button_center_screen_location_y
+                ).toFloat()
+                revealEffect = PowerButtonReveal(powerButtonY)
+            } else {
+                revealEffect = LiftReveal
             }
 
             // Start the animation on the next frame. startAnimation() is called after

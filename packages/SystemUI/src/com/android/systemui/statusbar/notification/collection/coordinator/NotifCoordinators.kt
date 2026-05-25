@@ -122,6 +122,9 @@ constructor(
         }
 
         // Manually add Ordered Sections
+        if (NotificationBundleUi.isEnabled) {
+            mOrderedSections.add(bundleCoordinator.essentialSectioner) // Essential
+        }
         if (NotificationMinimalism.isEnabled) {
             mOrderedSections.add(lockScreenMinimalismCoordinator.topOngoingSectioner) // Top Ongoing
         }
@@ -135,9 +138,6 @@ constructor(
         }
         mOrderedSections.add(conversationCoordinator.priorityPeopleSectioner) // Priority People
         mOrderedSections.add(conversationCoordinator.peopleAlertingSectioner) // People Alerting
-        if (NotificationBundleUi.isEnabled) {
-            mOrderedSections.add(bundleCoordinator.essentialSectioner) // Essential
-        }
         mOrderedSections.add(rankingCoordinator.alertingSectioner) // Alerting
         mOrderedSections.add(rankingCoordinator.silentSectioner) // Silent
         mOrderedSections.add(rankingCoordinator.minimizedSectioner) // Minimized

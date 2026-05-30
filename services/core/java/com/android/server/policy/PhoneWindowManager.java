@@ -2472,7 +2472,11 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 toggleTorch();
                 break;
             case SCREENSHOT:
-                takeScreenshot(SCREENSHOT_KEY_OTHER);
+                takeScreenshot(TAKE_SCREENSHOT_FULLSCREEN, SCREENSHOT_KEY_OTHER);
+                notifyKeyGestureCompleted(event, KeyGestureEvent.KEY_GESTURE_TYPE_TAKE_SCREENSHOT);
+                break;
+            case PARTIAL_SCREENSHOT:
+                takeScreenshot(TAKE_SCREENSHOT_SELECTED_REGION, SCREENSHOT_KEY_OTHER);
                 notifyKeyGestureCompleted(event, KeyGestureEvent.KEY_GESTURE_TYPE_TAKE_SCREENSHOT);
                 break;
             case VOLUME_PANEL:
@@ -8231,8 +8235,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         }
     }
 
-    private void takeScreenshot(int source) {
-        mScreenshotHelper.takeScreenshot(source, mHandler, null);
+    private void takeScreenshot(int type, int source) {
+        mScreenshotHelper.takeScreenshot(type, source, mHandler, null);
     }
 
     private void toggleRingerModes() {

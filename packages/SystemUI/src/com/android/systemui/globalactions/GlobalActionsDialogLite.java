@@ -103,7 +103,8 @@ import android.widget.ImageView.ScaleType;
 import android.widget.LinearLayout;
 import android.widget.ListPopupWindow;
 import android.widget.TextView;
-import android.window.OnBackInvokedCallback;
+import android.window.BackEvent;
+import android.window.OnBackAnimationCallback;
 import android.window.OnBackInvokedDispatcher;
 
 import androidx.annotation.NonNull;
@@ -111,6 +112,8 @@ import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LifecycleRegistry;
 
+import com.android.axion.blur.AxBlurColors;
+import com.android.axion.blur.AxWindowBlurController;
 import com.android.app.animation.Interpolators;
 import com.android.internal.R;
 import com.android.internal.annotations.VisibleForTesting;
@@ -217,6 +220,8 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
     private static final String INTERACTION_JANK_TAG = "global_actions";
 
     private static final boolean SHOW_SILENT_TOGGLE = true;
+    private static final float BACK_ANIMATION_MIN_SCALE = 0.9f;
+    private static final float BACK_ANIMATION_MARGIN_DP = 8f;
 
     private static final String RESTART_ACTION_KEY_RESTART = "restart";
     private static final String RESTART_ACTION_KEY_RESTART_RECOVERY = "restart_recovery";
@@ -1906,6 +1911,7 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
      */
     @Override
     public void onShow(DialogInterface dialog) {
+        AxWindowBlurController.applyBlurBehind(((Dialog) dialog).getWindow(), mContext);
         mMetricsLogger.visible(MetricsEvent.POWER_MENU);
         mUiEventLogger.log(GlobalActionsEvent.GA_POWER_MENU_OPEN);
         mInteractor.onShown();
@@ -3402,6 +3408,37 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
             if (DEBUG) Log.d(TAG, "OnBackInvokedCallback handler unregistered");
         }
 
+        private void updateBackAnimation(BackEvent backEvent) {
+            float progress = Interpolators.BACK_GESTURE.getInterpolation(backEvent.getProgress());
+            float scale = 1f - progress * (1f - BACK_ANIMATION_MIN_SCALE);
+            DisplayMetrics displayMetrics = mGlobalActionsLayout.getResources().getDisplayMetrics();
+            float maxMarginPx = TypedValue.applyDimension(
+                    TypedValue.COMPLEX_UNIT_DIP, BACK_ANIMATION_MARGIN_DP, displayMetrics);
+            float maxTranslationX = (displayMetrics.widthPixels
+                    - displayMetrics.widthPixels * BACK_ANIMATION_MIN_SCALE) * 0.5f - maxMarginPx;
+            float maxTranslationY = (displayMetrics.heightPixels
+                    - displayMetrics.heightPixels * BACK_ANIMATION_MIN_SCALE) * 0.5f - maxMarginPx;
+            float touchY = backEvent.getTouchY();
+            float progressY = Float.isNaN(touchY) || Float.isNaN(mBackStartY)
+                    ? 0f
+                    : (touchY - mBackStartY) / displayMetrics.heightPixels;
+            int direction = backEvent.getSwipeEdge() == BackEvent.EDGE_LEFT
+                    ? 1
+                    : backEvent.getSwipeEdge() == BackEvent.EDGE_RIGHT ? -1 : 0;
+            mGlobalActionsLayout.setTranslationX(progress * direction * maxTranslationX);
+            mGlobalActionsLayout.setTranslationY(progressY * maxTranslationY);
+            mGlobalActionsLayout.setScaleX(scale);
+            mGlobalActionsLayout.setScaleY(scale);
+        }
+
+        private void resetBackAnimation() {
+            mBackStartY = Float.NaN;
+            mGlobalActionsLayout.setTranslationX(0f);
+            mGlobalActionsLayout.setTranslationY(0f);
+            mGlobalActionsLayout.setScaleX(1f);
+            mGlobalActionsLayout.setScaleY(1f);
+        }
+
         private void logOnBackInvocation() {
             mUiEventLogger.log(GlobalActionsEvent.GA_CLOSE_BACK);
             if (DEBUG) Log.d(TAG, "onBack invoked");
@@ -3516,7 +3553,6 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
 
                 @Override
                 public void onAnimationEnd(Animator animation) {
-                    mGlobalActionsLayout.setLayerType(mPreviousLayerType, null);
                     if (then != null) {
                         then.run();
                     }

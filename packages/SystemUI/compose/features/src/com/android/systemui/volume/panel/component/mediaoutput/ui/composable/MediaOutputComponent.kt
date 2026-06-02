@@ -74,6 +74,7 @@ import com.android.systemui.volume.panel.component.mediastream.ui.composable.Med
 import com.android.systemui.volume.panel.dagger.scope.VolumePanelScope
 import com.android.systemui.volume.panel.ui.composable.ComposeVolumePanelUiComponent
 import com.android.systemui.volume.panel.ui.composable.VolumePanelComposeScope
+import com.android.axion.blur.AxBlurSurfaceDefaults
 import com.google.common.annotations.VisibleForTesting
 import java.util.Objects
 import javax.inject.Inject

@@ -66,15 +66,11 @@ public class GlobalActionsPowerDialog {
         flow.setMaxElementsWrap(nElementsWrap);
 
         Dialog dialog = new Dialog(context);
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        dialog.setContentView(listView);
-
-        Window window = dialog.getWindow();
         window.setType(WindowManager.LayoutParams.TYPE_VOLUME_OVERLAY);
         window.setTitle(""); // prevent Talkback from speaking first item name twice
-        window.setBackgroundDrawable(res.getDrawable(
-                com.android.systemui.res.R.drawable.global_actions_lite_background,
-                context.getTheme()));
+        window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+        window.setDimAmount(0f);
         window.addFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
         window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
         if (blurUtils.supportsBlursOnWindows()) {

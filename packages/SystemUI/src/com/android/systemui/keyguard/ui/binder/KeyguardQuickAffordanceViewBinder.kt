@@ -43,6 +43,7 @@ import com.android.systemui.common.shared.model.Icon
 import com.android.systemui.common.ui.binder.IconViewBinder
 import com.android.systemui.common.ui.view.updateLongClickListener
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.keyguard.ui.view.KeyguardQuickAffordanceButton
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardQuickAffordanceHapticViewModel
 import com.android.systemui.keyguard.ui.viewmodel.KeyguardQuickAffordanceViewModel
 import com.android.systemui.lifecycle.repeatWhenAttached
@@ -115,6 +116,7 @@ constructor(
                 repeatOnLifecycle(Lifecycle.State.STARTED) {
                     launch {
                         viewModel.collect { buttonModel ->
+                            latestViewModel = buttonModel
                             updateButton(
                                 view = button,
                                 viewModel = buttonModel,
@@ -154,6 +156,7 @@ constructor(
         return object : Binding {
             override fun onConfigurationChanged() {
                 configurationBasedDimensions.value = loadFromResources(view)
+                latestViewModel?.let { updateButtonColors(button, it) }
             }
 
             override fun destroy() {
@@ -292,8 +295,34 @@ constructor(
             view.setOnClickListener(null)
             view.setOnTouchListener(null)
         }
+    }
 
-        view.isSelected = viewModel.isSelected
+    private fun updateButtonColors(
+        view: ImageView,
+        viewModel: KeyguardQuickAffordanceViewModel,
+    ) {
+        if (view is KeyguardQuickAffordanceButton) {
+            view.updateThemeColors()
+            return
+        }
+        view.drawable?.setTint(
+            view.context.getColor(
+                if (viewModel.isActivated) {
+                    AndroidR.color.materialColorOnPrimaryFixed
+                } else {
+                    AndroidR.color.materialColorOnSurface
+                }
+            )
+        )
+
+        view.backgroundTintList =
+            if (!viewModel.isSelected && viewModel.isActivated) {
+                ColorStateList.valueOf(
+                    view.context.getColor(AndroidR.color.materialColorPrimaryFixed)
+                )
+            } else {
+                null
+            }
     }
 
     private suspend fun updateButtonAlpha(

@@ -61,6 +61,7 @@
     <color name="global_actions_grid_background_blur_fallback">@android:color/system_accent1_200</color>
 
     <!-- Colors for Power Menu Lite -->
+    <color name="global_actions_background_scrim">#99000000</color>
     <color name="global_actions_lite_button_background_focused">#808080</color>
     <color name="global_actions_lite_emergency_background">#D8372D</color>
     <color name="global_actions_lite_emergency_icon">#FFFFFF</color>

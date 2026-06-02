@@ -37,6 +37,7 @@ import com.android.systemui.volume.panel.component.button.ui.viewmodel.ButtonVie
 import com.android.systemui.volume.panel.component.popup.ui.composable.VolumePanelPopup.Companion.calculateGravity
 import com.android.systemui.volume.panel.ui.composable.ComposeVolumePanelUiComponent
 import com.android.systemui.volume.panel.ui.composable.VolumePanelComposeScope
+import com.android.axion.blur.AxBlurSurfaceDefaults
 import kotlinx.coroutines.flow.StateFlow
 
 /** [ComposeVolumePanelUiComponent] implementing a clickable button from a bottom row. */

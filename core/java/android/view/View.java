@@ -24354,10 +24354,6 @@ public class View implements Drawable.Callback, KeyEvent.Callback,
 
                     mPrivateFlags4 |= PFLAG4_HAS_DRAWN;
 
-		    // Treat as a move for preferred frame rate purposes
-		    // This solves refresh rate drops during any stretch effects
-                    mPrivateFlags4 |= PFLAG4_HAS_MOVED;
-
                     // Fast path for layouts with no backgrounds
                     if ((mPrivateFlags & PFLAG_SKIP_DRAW) == PFLAG_SKIP_DRAW) {
                         dispatchDraw(canvas);
@@ -24370,6 +24366,12 @@ public class View implements Drawable.Callback, KeyEvent.Callback,
                         }
                     } else {
                         draw(canvas);
+                    }
+
+                    // Treat as a move for preferred frame rate purposes if stretch
+                    // effects are active during this draw pass
+                    if (renderNode.hasStretch()) {
+                        mPrivateFlags4 |= PFLAG4_HAS_MOVED;
                     }
 
                     // For VRR to vote the preferred frame rate

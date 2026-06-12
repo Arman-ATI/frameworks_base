@@ -99,6 +99,7 @@ import android.content.pm.ActivityInfo;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.hardware.HardwareBuffer;
+import android.hardware.power.Boost;
 import android.hardware.SyncFence;
 import android.os.Binder;
 import android.os.Bundle;
@@ -106,6 +107,7 @@ import android.os.Debug;
 import android.os.IBinder;
 import android.os.IRemoteCallback;
 import android.os.Looper;
+import android.os.PowerManagerInternal;
 import android.os.RemoteException;
 import android.os.SystemClock;
 import android.os.Trace;
@@ -136,6 +138,7 @@ import com.android.internal.protolog.ProtoLog;
 import com.android.internal.protolog.WmProtoLogGroups;
 import com.android.internal.util.function.pooled.PooledLambda;
 import com.android.server.inputmethod.InputMethodManagerInternal;
+import com.android.server.LocalServices;
 import com.android.server.statusbar.StatusBarManagerInternal;
 import com.android.window.flags.Flags;
 
@@ -208,6 +211,8 @@ class Transition implements BLASTSyncEngine.TransactionReadyListener {
     final WindowManagerService mWmService;
     private final BLASTSyncEngine mSyncEngine;
     private final Token mToken;
+
+    private final PowerManagerInternal mPowerManagerInternal;
 
     private @Nullable ActivityRecord mPipActivity;
     private @Nullable TransitionRequestInfo.RequestedLocation mRequestedLocation;
@@ -417,6 +422,7 @@ class Transition implements BLASTSyncEngine.TransactionReadyListener {
 
         mLogger.mCreateWallTimeMs = System.currentTimeMillis();
         mLogger.mCreateTimeNs = SystemClock.elapsedRealtimeNanos();
+        mPowerManagerInternal = LocalServices.getService(PowerManagerInternal.class);
         if (!mController.useFullReadyTracking()) {
             mReadyTracker.add(mReadyTrackerOld);
         }
@@ -887,6 +893,9 @@ class Transition implements BLASTSyncEngine.TransactionReadyListener {
             return;
         }
         mState = STATE_STARTED;
+        if (mType == TRANSIT_CHANGE) {
+            doActivityBoost();
+        }
         ProtoLog.v(WmProtoLogGroups.WM_DEBUG_WINDOW_TRANSITIONS, "Starting Transition %d",
                 mSyncId);
         applyReady();
@@ -895,6 +904,12 @@ class Transition implements BLASTSyncEngine.TransactionReadyListener {
 
         mController.updateAnimatingState();
         reportFullscreenRequestFallbackResult();
+    }
+
+    protected void doActivityBoost() {
+        if (mPowerManagerInternal != null) {
+            mPowerManagerInternal.setPowerBoost(Boost.INTERACTION, 500);
+        }
     }
 
     /**

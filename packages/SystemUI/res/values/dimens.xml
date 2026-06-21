@@ -2323,4 +2323,6 @@
     <dimen name="usb_device_dialog_button_background_radius_full">360dp</dimen>
     <!-- Usb Device Dialog values end -->
 
+    <!-- wifi standard spacing -->
+    <dimen name="wifi_standard_spacer_width">1sp</dimen>
 </resources>

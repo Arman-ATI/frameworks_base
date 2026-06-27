@@ -908,7 +908,7 @@ class Transition implements BLASTSyncEngine.TransactionReadyListener {
 
     protected void doActivityBoost() {
         if (mPowerManagerInternal != null) {
-            mPowerManagerInternal.setPowerBoost(Boost.INTERACTION, 500);
+            mPowerManagerInternal.setPowerBoost(Boost.INTERACTION, 300);
         }
     }
 

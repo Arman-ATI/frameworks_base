@@ -109,6 +109,16 @@ constructor(
             .distinctUntilChanged()
             .flowOn(backgroundDispatcher)
 
+    val hasEssentialNotifications: Flow<Boolean> =
+        repository.activeNotifications
+            .map { store ->
+                store.bundles.values.any { bundle ->
+                    bundle.isEssential && bundle.children.isNotEmpty()
+                }
+            }
+            .distinctUntilChanged()
+            .flowOn(backgroundDispatcher)
+
     /**
      * The same as [areAnyNotificationsPresent], but without flows, for easy access in synchronous
      * code.

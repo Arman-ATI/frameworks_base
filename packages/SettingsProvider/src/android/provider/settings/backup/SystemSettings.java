@@ -134,7 +134,8 @@ public class SystemSettings {
                 Settings.System.PEAK_REFRESH_RATE,
                 Settings.System.MIN_REFRESH_RATE,
                 Settings.System.ACCESSIBILITY_FORCE_INVERT_COLOR_OVERRIDE_PACKAGES_TO_DISABLE,
-                Settings.System.NAVBAR_LONG_PRESS_GESTURE
+                Settings.System.NAVBAR_LONG_PRESS_GESTURE,
+                Settings.System.SHADE_SCRIM_ALPHA
         ));
         return settings.toArray(new String[0]);
     }

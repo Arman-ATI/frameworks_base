@@ -7545,6 +7545,12 @@ public final class Settings {
         public static final String QS_BRIGHTNESS_SLIDER_HAPTIC = "qs_brightness_slider_haptic";
 
         /**
+         * Customizable notification shade scrim alpha (0-100).
+         * @hide
+         */
+        public static final String SHADE_SCRIM_ALPHA = "shade_scrim_alpha";
+
+        /**
          * Lockscreen Media Art
          * @hide
          */

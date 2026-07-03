@@ -54,9 +54,9 @@ public class ScrimDrawable extends Drawable {
     private boolean mShouldUseLargeScreenSize;
     private final Paint mPaint;
     private final Paint mGradientPaint;
-    private final Paint mGlassPaint;
     private final Path mPath = new Path();
     private final RectF mBoundsRectF = new RectF();
+    private final int[] mGradientColors = new int[GRADIENT_LAYER_COUNT];
 
     private int mAlpha = 255;
     private int mMainColor;
@@ -72,6 +72,9 @@ public class ScrimDrawable extends Drawable {
     private int mBackgroundTintColor = Color.TRANSPARENT;
     private float mGlassEffectIntensity = 0f;
     private Shader mGlassmorphismShader;
+    // Shader creation allocates a native object; rebuild lazily in draw() only
+    // when an input (color, accent, tint, intensity, bounds) has changed.
+    private boolean mGlassShaderDirty = true;
 
     public ScrimDrawable() {
         mPaint = new Paint();
@@ -80,10 +83,6 @@ public class ScrimDrawable extends Drawable {
         mGradientPaint = new Paint();
         mGradientPaint.setStyle(Paint.Style.FILL);
         mGradientPaint.setAntiAlias(true);
-
-        mGlassPaint = new Paint();
-        mGlassPaint.setStyle(Paint.Style.FILL);
-        mGlassPaint.setAntiAlias(true);
 
         mShouldUseLargeScreenSize = false;
     }
@@ -110,7 +109,7 @@ public class ScrimDrawable extends Drawable {
             anim.addUpdateListener(animation -> {
                 float ratio = (float) animation.getAnimatedValue();
                 mMainColor = ColorUtils.blendARGB(mainFrom, mainColor, ratio);
-                updateGlassmorphismShader();
+                mGlassShaderDirty = true;
                 invalidateSelf();
             });
             anim.addListener(new AnimatorListenerAdapter() {
@@ -126,7 +125,7 @@ public class ScrimDrawable extends Drawable {
             mColorAnimation = anim;
         } else {
             mMainColor = mainColor;
-            updateGlassmorphismShader();
+            mGlassShaderDirty = true;
             invalidateSelf();
         }
     }
@@ -137,7 +136,7 @@ public class ScrimDrawable extends Drawable {
     public void setAccentColor(int accentColor) {
         if (mAccentColor != accentColor) {
             mAccentColor = accentColor;
-            updateGlassmorphismShader();
+            mGlassShaderDirty = true;
             invalidateSelf();
         }
     }
@@ -149,7 +148,7 @@ public class ScrimDrawable extends Drawable {
         if (mBackgroundTintColor != tintColor || mGlassEffectIntensity != intensity) {
             mBackgroundTintColor = tintColor;
             mGlassEffectIntensity = intensity;
-            updateGlassmorphismShader();
+            mGlassShaderDirty = true;
             invalidateSelf();
         }
     }
@@ -162,6 +161,7 @@ public class ScrimDrawable extends Drawable {
         if (bounds.isEmpty()) {
             return;
         }
+        mGlassShaderDirty = false;
 
         float width = bounds.width();
         float height = bounds.height();
@@ -173,7 +173,7 @@ public class ScrimDrawable extends Drawable {
         int baseGreen = Color.green(mMainColor);
         int baseBlue = Color.blue(mMainColor);
 
-        int[] colors = new int[GRADIENT_LAYER_COUNT];
+        int[] colors = mGradientColors;
         float[] positions = GRADIENT_POSITIONS;
 
         if (mAccentColor != Color.TRANSPARENT && mGlassEffectIntensity > 0) {
@@ -305,9 +305,14 @@ public class ScrimDrawable extends Drawable {
 
     @Override
     public void draw(@NonNull Canvas canvas) {
-        if (mGlassmorphismShader != null && mGlassEffectIntensity > 0) {
-            mGradientPaint.setAlpha((int) (mAlpha * mGlassEffectIntensity));
-            drawShape(canvas, mGradientPaint);
+        if (mGlassEffectIntensity > 0) {
+            if (mGlassShaderDirty) {
+                updateGlassmorphismShader();
+            }
+            if (mGlassmorphismShader != null) {
+                mGradientPaint.setAlpha((int) (mAlpha * mGlassEffectIntensity));
+                drawShape(canvas, mGradientPaint);
+            }
         }
 
         mPaint.setColor(mMainColor);
@@ -366,7 +371,7 @@ public class ScrimDrawable extends Drawable {
     @Override
     protected void onBoundsChange(Rect bounds) {
         updatePath();
-        updateGlassmorphismShader();
+        mGlassShaderDirty = true;
     }
 
     private void updatePath() {

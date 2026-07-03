@@ -20,9 +20,8 @@ import android.content.Context
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import com.android.systemui.dagger.SysUISingleton
+import com.android.systemui.lifecycle.ExclusiveActivatable
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,7 +39,7 @@ data class MediaState(
 class MiniPlayerViewModel @AssistedInject constructor(
     private val context: Context,
     private val mediaSessionManager: MediaSessionManager,
-) : ViewModel() {
+) : ExclusiveActivatable() {
 
     private val _mediaState = MutableStateFlow(MediaState())
     val mediaState: StateFlow<MediaState> = _mediaState.asStateFlow()
@@ -63,7 +62,9 @@ class MiniPlayerViewModel @AssistedInject constructor(
         }
     }
 
-    init {
+    // Listeners live only while this view model is composed; ExclusiveActivatable
+    // guarantees onDeactivated runs when the hosting composition is disposed.
+    override suspend fun onActivated() {
         try {
             val controllers = mediaSessionManager.getActiveSessions(null)
             updateActiveController(controllers)
@@ -74,6 +75,15 @@ class MiniPlayerViewModel @AssistedInject constructor(
         try {
             mediaSessionManager.addOnActiveSessionsChangedListener(sessionListener, null)
         } catch (e: SecurityException) {
+        }
+    }
+
+    override suspend fun onDeactivated() {
+        activeController?.unregisterCallback(controllerCallback)
+        activeController = null
+        try {
+            mediaSessionManager.removeOnActiveSessionsChangedListener(sessionListener)
+        } catch (e: Exception) {
         }
     }
 
@@ -124,15 +134,6 @@ class MiniPlayerViewModel @AssistedInject constructor(
 
     fun skipToPrevious() {
         activeController?.transportControls?.skipToPrevious()
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        activeController?.unregisterCallback(controllerCallback)
-        try {
-            mediaSessionManager.removeOnActiveSessionsChangedListener(sessionListener)
-        } catch (e: Exception) {
-        }
     }
 
     @AssistedFactory

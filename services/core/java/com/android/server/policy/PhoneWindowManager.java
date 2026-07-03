@@ -859,6 +859,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     private ThreeFingersSwipeListener mThreeFingersSwipe;
     private boolean mThreeFingersSwipeHasAction;
 
+    private boolean mScreenOnReclaim;
+
     private PocketManager mPocketManager;
     private PocketLock mPocketLock;
     private boolean mPocketLockShowing;
@@ -1159,6 +1161,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     UserHandle.USER_ALL);
             resolver.registerContentObserver(LineageSettings.System.getUriFor(
                     LineageSettings.System.KEY_SHAKE_GESTURE_ACTION), false, this,
+                    UserHandle.USER_ALL);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.SCREEN_ON_MEMORY_RECLAIM), false, this,
                     UserHandle.USER_ALL);
             updateSettings();
         }
@@ -3759,6 +3764,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             mGlobalActionsOnLockEnable = Settings.System.getIntForUser(resolver,
                     Settings.System.LOCKSCREEN_ENABLE_POWER_MENU, 1,
                     UserHandle.USER_CURRENT) != 0;
+
+            mScreenOnReclaim = Settings.System.getIntForUser(resolver,
+                    Settings.System.SCREEN_ON_MEMORY_RECLAIM, 1, UserHandle.USER_CURRENT) == 1;
 
             kidsModeEnabled = Settings.Secure.getIntForUser(resolver,
                     Settings.Secure.NAV_BAR_KIDS_MODE, 0, UserHandle.USER_CURRENT) == 1;
@@ -6502,8 +6510,10 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
         EventLogTags.writeScreenToggled(1);
 
-        mHandler.removeCallbacks(mMemoryOpt);
-        mHandler.postDelayed(mMemoryOpt, 1250 /* allowance time */);
+        if (mScreenOnReclaim) {
+            mHandler.removeCallbacks(mMemoryOpt);
+            mHandler.postDelayed(mMemoryOpt, 1250 /* allowance time */);
+        }
 
         // remove pending system server gc for frequent screen state changes
         mHandler.removeCallbacks(mSystemServerGcOpt);

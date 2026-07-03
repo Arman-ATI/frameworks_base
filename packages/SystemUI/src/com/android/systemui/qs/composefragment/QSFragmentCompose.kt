@@ -270,6 +270,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.scale
 import com.android.systemui.qs.pipeline.domain.model.TileModel
@@ -413,31 +414,39 @@ constructor(
         val context = LocalContext.current
         val prefs = remember { context.getSharedPreferences("qs_oneui_layout", Context.MODE_PRIVATE) }
         var hasLoadedLayout by remember { mutableStateOf(false) }
+        var lastSavedLayout by remember { mutableStateOf<String?>(null) }
 
         LaunchedEffect(Unit) {
-            val saved = prefs.getString("layout", null)
-            if (!saved.isNullOrEmpty()) {
-                try {
-                    val items = saved.split(";").mapNotNull { part ->
-                        val props = part.split(",")
-                        if (props[0] == "header") {
-                            QSLayoutItem.SectionHeader(SectionType.valueOf(props[1]), props[2].toBoolean(), props.getOrNull(3)?.toFloat() ?: 2f)
-                        } else if (props[0] == "tile") {
-                            QSLayoutItem.TileItem(TileSpec.create(props[1]), props[2].toInt(), props[3].toInt())
-                        } else null
+            // Prefs read + parsing off the main thread; first read blocks on disk.
+            val items = withContext(backgroundDispatcher) {
+                val saved = prefs.getString("layout", null)
+                if (saved.isNullOrEmpty()) {
+                    null
+                } else {
+                    try {
+                        saved to saved.split(";").mapNotNull { part ->
+                            val props = part.split(",")
+                            if (props[0] == "header") {
+                                QSLayoutItem.SectionHeader(SectionType.valueOf(props[1]), props[2].toBoolean(), props.getOrNull(3)?.toFloat() ?: 2f)
+                            } else if (props[0] == "tile") {
+                                QSLayoutItem.TileItem(TileSpec.create(props[1]), props[2].toInt(), props[3].toInt())
+                            } else null
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        null
                     }
-                    if (items.isNotEmpty()) {
-                        viewModel.sectionEditModeViewModel.setFlatLayout(items)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
                 }
+            }
+            if (items != null && items.second.isNotEmpty()) {
+                lastSavedLayout = items.first
+                viewModel.sectionEditModeViewModel.setFlatLayout(items.second)
             }
             hasLoadedLayout = true
         }
 
         val flatLayout by viewModel.sectionEditModeViewModel.flatLayout.collectAsStateWithLifecycle(initialValue = QSLayoutItem.getDefault())
-        
+
         var isFirstLayoutEmission by remember { mutableStateOf(true) }
         var lastPushedSpecs by remember { mutableStateOf<Set<TileSpec>>(emptySet()) }
 
@@ -453,7 +462,10 @@ constructor(
                         is QSLayoutItem.TileItem -> "tile,${item.spec.spec},${item.spanCols},${item.spanRows}"
                     }
                 }
-                prefs.edit().putString("layout", str).apply()
+                if (str != lastSavedLayout) {
+                    lastSavedLayout = str
+                    prefs.edit().putString("layout", str).apply()
+                }
             }
         }
 

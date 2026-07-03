@@ -19,17 +19,31 @@ package com.android.systemui.qs.composefragment
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.android.systemui.qs.pipeline.shared.TileSpec
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 
 class OneUiTileStore(private val prefs: SharedPreferences) {
 
-    private val _insideTiles = MutableStateFlow(loadFromPrefs())
+    private val _insideTiles = MutableStateFlow<List<TileSpec>>(emptyList())
     val insideTiles: StateFlow<List<TileSpec>> = _insideTiles.asStateFlow()
+
+    private var mutated = false
+
+    // Seeds the flow from prefs off the main thread; skipped if the user
+    // already changed the tiles before the read finished.
+    suspend fun load() {
+        val loaded = withContext(Dispatchers.IO) { loadFromPrefs() }
+        if (!mutated) {
+            _insideTiles.value = loaded
+        }
+    }
 
     private fun loadFromPrefs(): List<TileSpec> {
         val saved = prefs.getString(KEY_INSIDE_TILES, null) ?: return emptyList()
@@ -46,6 +60,7 @@ class OneUiTileStore(private val prefs: SharedPreferences) {
     }
 
     fun addTile(spec: TileSpec) {
+        mutated = true
         val current = _insideTiles.value
         if (current.any { it == spec }) return
         val updated = current + spec
@@ -54,6 +69,7 @@ class OneUiTileStore(private val prefs: SharedPreferences) {
     }
 
     fun removeTile(spec: TileSpec) {
+        mutated = true
         val current = _insideTiles.value
         if (current.none { it == spec }) return
         val updated = current.filter { it != spec }
@@ -62,6 +78,7 @@ class OneUiTileStore(private val prefs: SharedPreferences) {
     }
 
     fun setTiles(specs: List<TileSpec>) {
+        mutated = true
         _insideTiles.value = specs
         persist(specs)
     }
@@ -77,8 +94,10 @@ class OneUiTileStore(private val prefs: SharedPreferences) {
 @Composable
 fun rememberOneUiTileStore(): OneUiTileStore {
     val context = LocalContext.current
-    return remember {
+    val store = remember {
         val prefs = context.getSharedPreferences("qs_oneui_layout", Context.MODE_PRIVATE)
         OneUiTileStore(prefs)
     }
+    LaunchedEffect(store) { store.load() }
+    return store
 }

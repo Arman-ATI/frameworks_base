@@ -78,9 +78,9 @@ constructor(
     )
     val mainQSFloatingTiles: Flow<List<FloatingTile>> = _mainQSFloatingTiles
 
-    private val _flatLayout = MutableStateFlow(
-        loadFlatLayoutForUser(userRepository.getSelectedUserInfo().id)
-    )
+    // Hydrated from prefs on the background dispatcher in init; loading here
+    // would do disk I/O and JSON parsing on the constructing (main) thread.
+    private val _flatLayout = MutableStateFlow(QSLayoutItem.getDefault())
 
     val flatLayout: Flow<List<QSLayoutItem>> = _flatLayout
 
@@ -95,7 +95,7 @@ constructor(
     }
 
     init {
-        scope.launch {
+        scope.launch(backgroundDispatcher) {
             userRepository.selectedUserInfo.collect { userInfo ->
                 val prefs = getSharedPrefs(userInfo.id)
                 val tilesJson = prefs.getString(mainQSTilesKey, null)

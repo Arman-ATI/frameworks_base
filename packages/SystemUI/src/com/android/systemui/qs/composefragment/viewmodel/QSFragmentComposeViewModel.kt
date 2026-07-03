@@ -177,6 +177,7 @@ constructor(
         if (!stayInLayoutEditMode && !wasEditingBeforePicker) {
             containerViewModel.editModeViewModel.stopEditing()
         }
+        com.android.systemui.qs.panels.ui.compose.FloatingTileDragState.clearFallbackTiles()
     }
 
     fun getTilesForPicker(): Flow<List<EditTileViewModel>> {

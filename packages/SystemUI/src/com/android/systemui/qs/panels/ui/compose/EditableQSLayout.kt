@@ -242,6 +242,15 @@ object FloatingTileDragState {
         fingerOffset = Offset.Unspecified
         ghostTargetOrder = emptyList()
         ghostTargetOwnerId = null
+        isExternalDrag = false
+        dropRequested = false
+    }
+
+    // Fallback view models are only needed while editing, to bridge the gap
+    // until real tile state arrives; this is a process-wide object, so they
+    // must be released when the edit session ends.
+    fun clearFallbackTiles() {
+        fallbackTiles.clear()
     }
 
     const val ONE_UI_GHOST_OWNER_ID = "__one_ui_container__"

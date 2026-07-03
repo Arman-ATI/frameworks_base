@@ -72,6 +72,7 @@ constructor(
         _showTilePicker.value = false
         _isDraggingTile.value = false
         _draggedTileSpec.value = null
+        com.android.systemui.qs.panels.ui.compose.FloatingTileDragState.clearFallbackTiles()
     }
 
     fun setFlatLayout(items: List<QSLayoutItem>) {

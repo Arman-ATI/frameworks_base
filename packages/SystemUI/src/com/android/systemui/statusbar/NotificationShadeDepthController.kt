@@ -16,9 +16,6 @@
 
 package com.android.systemui.statusbar
 
-import android.app.WallpaperColors
-import android.app.WallpaperManager
-import android.content.Context
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
@@ -79,7 +76,6 @@ import kotlinx.coroutines.launch
 class NotificationShadeDepthController
 @Inject
 constructor(
-    private val context: Context,
     private val statusBarStateController: StatusBarStateController,
     private val blurUtils: BlurUtils,
     private val biometricUnlockController: BiometricUnlockController,
@@ -129,7 +125,6 @@ constructor(
     @VisibleForTesting var wallpaperSupportsAmbientMode: Boolean = false
     // tracks whether app launch transition is in progress. This involves two independent factors
 
-    private var wallpaperColors: WallpaperColors? = null
     private val oneUIBlurEnhancement = true
 
     // that control blur, shade expansion and app launch animation from outside sysui.
@@ -512,7 +507,6 @@ constructor(
                 }
             }
         }
-        initOneUIGlassmorphism()
         initBlurListeners()
     }
 
@@ -547,63 +541,6 @@ constructor(
         }
     }
 
-    /**
-     * Initialize OneUI glassmorphism effects
-     */
-    private fun initOneUIGlassmorphism() {
-        if (!oneUIBlurEnhancement) return
-        
-        try {
-            val wallpaperManager = context.getSystemService(WallpaperManager::class.java)
-            wallpaperManager?.addOnColorsChangedListener(
-                { colors, which ->
-                    if (which and WallpaperManager.FLAG_SYSTEM != 0) {
-                        wallpaperColors = colors
-                        updateGlassmorphismColors()
-                    }
-                },
-                android.os.Handler(android.os.Looper.getMainLooper())
-            )
-            
-            applicationScope.launch {
-                val initialColors = wallpaperManager?.getWallpaperColors(
-                    WallpaperManager.FLAG_SYSTEM
-                )
-                wallpaperColors = initialColors
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize glassmorphism listener", e)
-        }
-    }
-    
-    private fun updateGlassmorphismColors() {
-        val colors = wallpaperColors ?: return
-
-        try {
-            val primaryColor = colors.primaryColor?.toArgb()
-            val secondaryColor = colors.secondaryColor?.toArgb()
-
-            if (primaryColor != null) {
-                val intensity = (lastAppliedBlur / blurUtils.maxBlurRadius).coerceIn(0f, 1f)
-                notifyGlassmorphismUpdate(primaryColor, secondaryColor, intensity)
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error updating glassmorphism colors", e)
-        }
-    }
-    
-    private fun notifyGlassmorphismUpdate(
-        primaryColor: Int?, 
-        secondaryColor: Int?, 
-        intensity: Float
-    ) {
-        listeners.forEach { listener ->
-            if (listener is OneUIGlassmorphismListener) {
-                listener.onGlassmorphismColorsChanged(primaryColor, secondaryColor, intensity)
-            }
-        }
-    }
-    
     private fun applyOneUIBlurCurve(expansion: Float): Float {
         if (!oneUIBlurEnhancement) return expansion
         
@@ -621,14 +558,6 @@ constructor(
                 0.9f + (t * t * (3f - 2f * t) * 0.1f)
             }
         }.coerceIn(0f, 1f)
-    }
-
-    interface OneUIGlassmorphismListener : DepthListener {
-        fun onGlassmorphismColorsChanged(
-            primaryColor: Int?, 
-            secondaryColor: Int?, 
-            intensity: Float
-        )
     }
 
     fun addListener(listener: DepthListener) {

@@ -289,7 +289,9 @@ private fun FooterIcon(icon: Icon, modifier: Modifier = Modifier, tint: Color) {
     val contentDescription = icon.contentDescription?.load()
     when (icon) {
         is Icon.Loaded -> {
-            Icon(icon.drawable.toBitmap().asImageBitmap(), contentDescription, modifier, tint)
+            // Convert only when the drawable changes, not on every recomposition.
+            val bitmap = remember(icon.drawable) { icon.drawable.toBitmap().asImageBitmap() }
+            Icon(bitmap, contentDescription, modifier, tint)
         }
         is Icon.Resource -> Icon(painterResource(icon.res), contentDescription, modifier, tint)
     }

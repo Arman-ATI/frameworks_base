@@ -1894,7 +1894,10 @@ fun DraggableTile(
 
     val fallbackEditTile = editTile ?: FloatingTileDragState.fallbackTiles[tile.spec]
 
-    val state by produceState<QSTile.State?>(initialValue = qsTile?.state?.copy(), key1 = qsTile) {
+    // The initialValue expression runs on every recomposition; remember it so
+    // the state copy is only made when the tile instance changes.
+    val initialState = remember(qsTile) { qsTile?.state?.copy() }
+    val state by produceState<QSTile.State?>(initialValue = initialState, key1 = qsTile) {
         if (qsTile == null || isBrightness) { value = null; return@produceState }
         val callback = object : QSTile.Callback {
             override fun onStateChanged(s: QSTile.State?) {
@@ -1975,6 +1978,8 @@ fun DraggableTile(
             val tilePxW = with(density) { liveW.toPx() }
             val tilePxH = with(density) { liveH.toPx() }
             val cornerPx = minOf(targetWPx, targetHPx) * 0.5f
+            // Reused across draw frames; Canvas draws every resize frame.
+            val outlinePath = remember { Path() }
 
             Canvas(modifier = Modifier.fillMaxSize().zIndex(10f)) {
 
@@ -1995,24 +2000,23 @@ fun DraggableTile(
                 val outRight  = (targetWPx + ghostOffsetPx.x).coerceAtLeast(minWidthPx)
                 val outBottom = (targetHPx + ghostOffsetPx.y).coerceAtLeast(minHeightPx)
 
-                val path = Path().apply {
-                    addRoundRect(
-                        RoundRect(
-                            left         = outLeft,
-                            top          = outTop,
-                            right        = outRight,
-                            bottom       = outBottom,
-                            cornerRadius = CornerRadius(cornerPx, cornerPx)
-                        )
+                outlinePath.reset()
+                outlinePath.addRoundRect(
+                    RoundRect(
+                        left         = outLeft,
+                        top          = outTop,
+                        right        = outRight,
+                        bottom       = outBottom,
+                        cornerRadius = CornerRadius(cornerPx, cornerPx)
                     )
-                }
+                )
                 drawPath(
-                    path  = path,
+                    path  = outlinePath,
                     color = outlineColor,
                     style = Stroke(width = 3.dp.toPx())
                 )
                 drawPath(
-                    path  = path,
+                    path  = outlinePath,
                     color = outlineColor.copy(alpha = 0.08f)
                 )
             }

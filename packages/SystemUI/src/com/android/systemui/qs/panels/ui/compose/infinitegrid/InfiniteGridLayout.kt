@@ -25,7 +25,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -216,11 +215,11 @@ constructor(
         val largeTiles by viewModel.iconTilesViewModel.largeTiles.collectAsStateWithLifecycle()
         val tileGridConfigs by viewModel.iconTilesViewModel.tileGridConfigs.collectAsStateWithLifecycle()
 
-        val currentTiles by rememberUpdatedState(tiles.filter { it.isCurrent })
-        val listState =
-            remember(columns, largeTilesSpan, tileGridConfigs) {
-                val tilesWithSizes = currentTiles.map { tile ->
-                    val config = tileGridConfigs.find { it.spec == tile.tileSpec }
+        val tilesWithSizes =
+            remember(tiles, tileGridConfigs) {
+                val configsBySpec = tileGridConfigs.associateBy { it.spec }
+                tiles.filter { it.isCurrent }.map { tile ->
+                    val config = configsBySpec[tile.tileSpec]
                     if (config != null) {
                         tile.copy(spanCols = config.spanCols, spanRows = config.spanRows)
                     } else {
@@ -228,6 +227,9 @@ constructor(
                         tile.copy(spanCols = defaultSize.first, spanRows = defaultSize.second)
                     }
                 }
+            }
+        val listState =
+            remember(columns, largeTilesSpan, tileGridConfigs) {
                 EditTileListState(
                     tilesWithSizes,
                     largeTiles,
@@ -235,16 +237,7 @@ constructor(
                     largeTilesSpan = largeTilesSpan,
                 )
             }
-        LaunchedEffect(currentTiles, largeTiles, tileGridConfigs) {
-            val tilesWithSizes = currentTiles.map { tile ->
-                val config = tileGridConfigs.find { it.spec == tile.tileSpec }
-                if (config != null) {
-                    tile.copy(spanCols = config.spanCols, spanRows = config.spanRows)
-                } else {
-                    val defaultSize = TileGridConfig.getDefaultSize(tile.tileSpec)
-                    tile.copy(spanCols = defaultSize.first, spanRows = defaultSize.second)
-                }
-            }
+        LaunchedEffect(tilesWithSizes, largeTiles) {
             listState.updateTiles(tilesWithSizes, largeTiles)
         }
 
@@ -257,7 +250,7 @@ constructor(
             onStopEditing = onStopEditing,
             iconTilesViewModel = iconTilesViewModel,
             onEditAction = { action ->
-                snapshotViewModel.takeSnapshot(currentTiles.map { it.tileSpec }, largeTiles)
+                snapshotViewModel.takeSnapshot(tilesWithSizes.map { it.tileSpec }, largeTiles)
 
                 when (action) {
                     is EditAction.InsertTile -> {

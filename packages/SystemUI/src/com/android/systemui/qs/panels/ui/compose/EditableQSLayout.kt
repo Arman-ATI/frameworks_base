@@ -572,6 +572,7 @@ fun EditableQuickSettingsLayout(
         if (now - lastSectionSwapMs < 150L) return
 
         val sectionSpacingPx = with(density) { SECTION_SPACING.toPx() }
+        val gridSpacingPx = with(density) { GRID_SPACING.toPx() }
 
         fun doSwap(header1Idx: Int, header2Idx: Int) {
             val newSegs = localSegments.toMutableList()
@@ -584,18 +585,35 @@ fun EditableQuickSettingsLayout(
             val block2 = newSegs.subList(header2Idx, endBlock2).toList()
 
             val isMovingDown = currentIndex == header1Idx
-            val otherHeaderId = localSegments[if (isMovingDown) header2Idx else header1Idx].stableId()
-            val otherTop = segTopY[otherHeaderId] ?: 0f
-            val otherH = segHeightPx[otherHeaderId] ?: 0f
-            val anim = segSlideAnims.getOrPut(otherHeaderId) { Animatable(0f) }
-            val slideDir = if (isMovingDown) 1f else -1f
-            coroutineScope.launch {
-                anim.snapTo(slideDir * (myH + sectionSpacingPx))
-                anim.animateTo(0f, spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMediumLow))
+            
+            val myBlock = if (isMovingDown) block1 else block2
+            val otherBlock = if (isMovingDown) block2 else block1
+
+            var myBlockTotalH = 0f
+            myBlock.forEachIndexed { i, s ->
+                myBlockTotalH += (segHeightPx[s.stableId()] ?: 0f)
+                if (i < myBlock.size - 1) {
+                    myBlockTotalH += if (myBlock[i] is Segment.TileGroup && myBlock[i+1] is Segment.TileGroup) 
+                        gridSpacingPx else sectionSpacingPx
+                }
             }
 
+            val slideAmount = myBlockTotalH + sectionSpacingPx
+            val slideDir = if (isMovingDown) 1f else -1f
+
+            otherBlock.forEach { seg ->
+                val anim = segSlideAnims.getOrPut(seg.stableId()) { Animatable(0f) }
+                coroutineScope.launch {
+                    anim.snapTo(slideDir * slideAmount)
+                    anim.animateTo(0f, spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMediumLow))
+                }
+            }
+
+            val otherHeaderId = localSegments[if (isMovingDown) header2Idx else header1Idx].stableId()
+            val otherTop = segTopY[otherHeaderId] ?: 0f
+
             segTopY[id] = if (isMovingDown) {
-                otherTop + otherH - myH
+                otherTop + (segHeightPx[otherHeaderId] ?: 0f) - myH
             } else {
                 otherTop
             }
@@ -608,32 +626,8 @@ fun EditableQuickSettingsLayout(
         }
 
         fun isVisibleSwapSegment(seg: Segment): Boolean = when (seg) {
-            is Segment.TileGroup -> true
+            is Segment.TileGroup -> false
             is Segment.Header -> seg.item.visible && seg.item.type != SectionType.BRIGHTNESS
-        }
-
-        fun swapWithTileBand(targetIdx: Int) {
-            val targetId = localSegments[targetIdx].stableId()
-            val targetTop = segTopY[targetId] ?: 0f
-            val targetH = segHeightPx[targetId] ?: 0f
-            val isMovingDown = currentIndex < targetIdx
-            val anim = segSlideAnims.getOrPut(targetId) { Animatable(0f) }
-            val slideDir = if (isMovingDown) 1f else -1f
-            coroutineScope.launch {
-                anim.snapTo(slideDir * (myH + sectionSpacingPx))
-                anim.animateTo(0f, spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMediumLow))
-            }
-
-            segTopY[id] = if (isMovingDown) {
-                targetTop + targetH - myH
-            } else {
-                targetTop
-            }
-
-            val newSegs = localSegments.toMutableList()
-            newSegs[currentIndex] = newSegs[targetIdx].also { newSegs[targetIdx] = newSegs[currentIndex] }
-            localSegments = newSegs.repackAll(splitBands = true)
-            lastSectionSwapMs = now
         }
 
         var targetUpIdx = currentIndex - 1
@@ -645,15 +639,23 @@ fun EditableQuickSettingsLayout(
             val prevSeg = localSegments[targetUpIdx]
             val prevId = prevSeg.stableId()
             val prevTop = segTopY[prevId]
-            val prevH = segHeightPx[prevId]
-            if (prevTop != null && prevH != null) {
-                val prevCenter = prevTop + (prevH / 2f)
-                if (myCenter < prevCenter + (prevH * 0.15f)) {
-                    if (prevSeg is Segment.Header) {
-                        doSwap(targetUpIdx, currentIndex)
-                    } else {
-                        swapWithTileBand(targetUpIdx)
+            if (prevTop != null) {
+                var blockBottom = prevTop
+                var i = targetUpIdx
+                while (i < localSegments.size) {
+                    if (i == currentIndex || (i > targetUpIdx && localSegments[i] is Segment.Header)) break
+                    val sId = localSegments[i].stableId()
+                    val sTop = segTopY[sId] ?: 0f
+                    val sH = segHeightPx[sId] ?: 0f
+                    if (sTop + sH > blockBottom) {
+                        blockBottom = sTop + sH
                     }
+                    i++
+                }
+                
+                val blockCenter = (prevTop + blockBottom) / 2f
+                if (myCenter < blockCenter) {
+                    doSwap(targetUpIdx, currentIndex)
                     return
                 }
             }
@@ -668,15 +670,23 @@ fun EditableQuickSettingsLayout(
             val nextSeg = localSegments[targetDownIdx]
             val nextId = nextSeg.stableId()
             val nextTop = segTopY[nextId]
-            val nextH = segHeightPx[nextId]
-            if (nextTop != null && nextH != null) {
-                val nextCenter = nextTop + (nextH / 2f)
-                if (myCenter > nextCenter - (nextH * 0.15f)) {
-                    if (nextSeg is Segment.Header) {
-                        doSwap(currentIndex, targetDownIdx)
-                    } else {
-                        swapWithTileBand(targetDownIdx)
+            if (nextTop != null) {
+                var blockBottom = nextTop
+                var i = targetDownIdx
+                while (i < localSegments.size) {
+                    if (i > targetDownIdx && localSegments[i] is Segment.Header) break
+                    val sId = localSegments[i].stableId()
+                    val sTop = segTopY[sId] ?: 0f
+                    val sH = segHeightPx[sId] ?: 0f
+                    if (sTop + sH > blockBottom) {
+                        blockBottom = sTop + sH
                     }
+                    i++
+                }
+                
+                val blockCenter = (nextTop + blockBottom) / 2f
+                if (myCenter > blockCenter) {
+                    doSwap(currentIndex, targetDownIdx)
                     return
                 }
             }

@@ -645,24 +645,6 @@ public class ScrimController implements ViewTreeObserver.OnPreDrawListener, Dump
     }
 
     /**
-     * Update glass effect intensity for a scrim based on expansion
-     */
-    private void updateScrimGlassIntensity(ScrimView scrimView, float intensity) {
-        if (scrimView == null) return;
-        Drawable drawable = scrimView.getBackground();
-        if (drawable instanceof ScrimDrawable) {
-            ScrimDrawable scrimDrawable = (ScrimDrawable) drawable;
-            // Get current tint color from wallpaper
-            int tintColor = mWallpaperColors != null &&
-                mWallpaperColors.getSecondaryColor() != null
-                ? mWallpaperColors.getSecondaryColor().toArgb()
-                : Color.TRANSPARENT;
-
-            scrimDrawable.setBackgroundTint(tintColor, intensity);
-        }
-    }
-
-    /**
      * Enable or disable OneUI glassmorphism effect
      */
     public void setOneUIGlassmorphismEnabled(boolean enabled) {

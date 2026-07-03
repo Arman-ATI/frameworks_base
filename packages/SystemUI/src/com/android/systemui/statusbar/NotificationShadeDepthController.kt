@@ -373,7 +373,6 @@ constructor(
     private fun onBlurApplied(appliedBlurRadius: Int, zoomOutFromShadeRadius: Float) {
         lastAppliedBlur = appliedBlurRadius
         onZoomOutChanged(zoomOutFromShadeRadius)
-        updateGlassmorphismColors()
         listeners.forEach { it.onBlurRadiusChanged(appliedBlurRadius) }
         notificationShadeWindowController.setBackgroundBlurRadius(appliedBlurRadius)
     }
@@ -579,17 +578,13 @@ constructor(
     
     private fun updateGlassmorphismColors() {
         val colors = wallpaperColors ?: return
-        
+
         try {
             val primaryColor = colors.primaryColor?.toArgb()
             val secondaryColor = colors.secondaryColor?.toArgb()
-            
+
             if (primaryColor != null) {
-                Log.v(TAG, "Updating glassmorphism with primary: ${Integer.toHexString(primaryColor)}")
-                
-                val intensity = (computeBlurAndZoomOut().first / blurUtils.maxBlurRadius)
-                    .coerceIn(0f, 1f)
-                
+                val intensity = (lastAppliedBlur / blurUtils.maxBlurRadius).coerceIn(0f, 1f)
                 notifyGlassmorphismUpdate(primaryColor, secondaryColor, intensity)
             }
         } catch (e: Exception) {

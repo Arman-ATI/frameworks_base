@@ -18,19 +18,9 @@ package com.android.systemui.statusbar
 
 import android.annotation.SuppressLint
 import android.app.ActivityManager
-import android.app.WallpaperColors
-import android.app.WallpaperManager.OnColorsChangedListener
-import android.app.WallpaperManager
-import android.content.Context
 import android.content.res.Resources
-import android.graphics.Bitmap
-import android.graphics.Color
-import android.graphics.RenderEffect
-import android.graphics.Shader
 import android.gui.EarlyWakeupInfo
 import android.os.Binder
-import android.os.Handler
-import android.os.Looper
 import android.os.Build
 import android.os.SystemProperties
 import android.os.Trace
@@ -44,7 +34,6 @@ import android.view.SurfaceControl
 import android.view.SyncRtSurfaceTransactionApplier
 import android.view.ViewRootImpl
 import androidx.annotation.VisibleForTesting
-import androidx.palette.graphics.Palette
 import com.android.systemui.Dumpable
 import com.android.systemui.Flags
 import com.android.systemui.dagger.SysUISingleton
@@ -63,7 +52,6 @@ open class BlurUtils
 constructor(
     @Main resources: Resources,
     blurConfig: BlurConfig,
-    private val context: Context,
     private val crossWindowBlurListeners: CrossWindowBlurListeners,
     dumpManager: DumpManager,
 ) : Dumpable {
@@ -86,95 +74,10 @@ constructor(
     private val earlyWakeupInfo = EarlyWakeupInfo()
     private var persistentEarlyWakeupRequired = false
 
-    private val wallpaperManager: WallpaperManager = context.getSystemService(WallpaperManager::class.java)
-    private var cachedWallpaperColors: WallpaperColors? = null
-    private var lastColorUpdateTime = 0L
-    private val COLOR_CACHE_DURATION = 5000L
-
-    private val BLUR_LAYER_COUNT = 3
-    private val BLUR_LAYER_RATIOS = floatArrayOf(0.4f, 0.7f, 1.0f)
-    private val BLUR_LAYER_ALPHAS = floatArrayOf(0.3f, 0.4f, 0.5f)
-
-    private var dominantColor: Int = Color.TRANSPARENT
-    private var vibrantColor: Int = Color.TRANSPARENT
-    private var mutedColor: Int = Color.TRANSPARENT
-
     init {
         dumpManager.registerDumpable(this)
         earlyWakeupInfo.token = Binder()
         earlyWakeupInfo.trace = BlurUtils::class.java.getName()
-
-        initWallpaperColorListener()
-    }
-
-    private fun initWallpaperColorListener() {
-        try {
-            val listener = OnColorsChangedListener { colors, which ->
-                if (which and WallpaperManager.FLAG_SYSTEM != 0) {
-                    cachedWallpaperColors = colors
-                    extractColorsFromWallpaper(colors)
-                    lastColorUpdateTime = System.currentTimeMillis()
-                }
-            }
-
-            wallpaperManager?.addOnColorsChangedListener(
-                listener,
-                Handler(Looper.getMainLooper())
-            )
-
-            val colors = wallpaperManager?.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
-            if (colors != null) {
-                cachedWallpaperColors = colors
-                extractColorsFromWallpaper(colors)
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize wallpaper color listener", e)
-        }
-    }
-
-    private fun extractColorsFromWallpaper(colors: WallpaperColors?) {
-        if (colors == null) return
-
-        try {
-            dominantColor = colors.primaryColor?.toArgb() ?: Color.TRANSPARENT
-
-            val secondaryColor = colors.secondaryColor?.toArgb()
-            val tertiaryColor = colors.tertiaryColor?.toArgb()
-
-            vibrantColor = when {
-                secondaryColor != null -> secondaryColor
-                dominantColor != Color.TRANSPARENT -> enhanceColorVibrance(dominantColor)
-                else -> Color.argb(128, 100, 150, 255)
-            }
-
-            mutedColor = when {
-                tertiaryColor != null -> tertiaryColor
-                dominantColor != Color.TRANSPARENT -> muteColor(dominantColor)
-                else -> Color.argb(128, 150, 150, 180)
-            }
-
-            Log.d(TAG, "Extracted colors - Dominant: ${Integer.toHexString(dominantColor)}, " +
-                    "Vibrant: ${Integer.toHexString(vibrantColor)}, " +
-                    "Muted: ${Integer.toHexString(mutedColor)}")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error extracting colors", e)
-        }
-    }
-
-    private fun enhanceColorVibrance(color: Int): Int {
-        val hsv = FloatArray(3)
-        Color.colorToHSV(color, hsv)
-        hsv[1] = (hsv[1] * 1.3f).coerceIn(0f, 1f)
-        hsv[2] = (hsv[2] * 1.1f).coerceIn(0f, 1f)
-        return Color.HSVToColor(Color.alpha(color), hsv)
-    }
-
-    private fun muteColor(color: Int): Int {
-        val hsv = FloatArray(3)
-        Color.colorToHSV(color, hsv)
-        hsv[1] = (hsv[1] * 0.4f).coerceIn(0f, 1f)
-        hsv[2] = (hsv[2] * 0.85f).coerceIn(0f, 1f)
-        return Color.HSVToColor((Color.alpha(color) * 0.8f).toInt(), hsv)
     }
 
     @VisibleForTesting
@@ -271,10 +174,6 @@ constructor(
             builder.withBackgroundBlurScale(scale)
         }
 
-        if (Flags.notificationShadeBlur() && dominantColor != Color.TRANSPARENT) {
-            applyGlassmorphismTint(builder, radius)
-        }
-
         if (lastAppliedBlur == 0 && radius != 0) {
             Trace.instantForTrack(TRACE_TAG_APP, TRACK_NAME, "notifyRendererForGpuLoadUp")
             viewRootImpl.notifyRendererForGpuLoadUp("applyBlur")
@@ -290,41 +189,6 @@ constructor(
 
         builder.withOpaque(opaque)
         transactionApplier.scheduleApply(builder.build())
-    }
-
-    private fun applyGlassmorphismTint(
-        builder: SyncRtSurfaceTransactionApplier.SurfaceParams.Builder,
-        radius: Int
-    ) {
-        val blurRatio = ratioOfBlurRadius(radius.toFloat())
-
-        val tintAlpha = (blurRatio * 0.25f * 255).toInt().coerceIn(0, 64)
-
-        val blendedColor = blendColors(
-            addAlpha(dominantColor, tintAlpha),
-            addAlpha(vibrantColor, (tintAlpha * 0.6f).toInt()),
-            blurRatio
-        )
-
-        try {
-
-            Log.v(TAG, "Applying glassmorphism tint: ${Integer.toHexString(blendedColor)}")
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not apply color tint", e)
-        }
-    }
-
-    private fun blendColors(color1: Int, color2: Int, ratio: Float): Int {
-        val inverseRatio = 1 - ratio
-        val r = (Color.red(color1) * inverseRatio + Color.red(color2) * ratio).toInt()
-        val g = (Color.green(color1) * inverseRatio + Color.green(color2) * ratio).toInt()
-        val b = (Color.blue(color1) * inverseRatio + Color.blue(color2) * ratio).toInt()
-        val a = (Color.alpha(color1) * inverseRatio + Color.alpha(color2) * ratio).toInt()
-        return Color.argb(a, r, g, b)
-    }
-
-    private fun addAlpha(color: Int, alpha: Int): Int {
-        return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color))
     }
 
     private fun updateTransactionApplier(viewRootImpl: ViewRootImpl) {
@@ -400,9 +264,6 @@ constructor(
             it.println("minBlurRadius: $minBlurRadius")
             it.println("maxBlurRadius: $maxBlurRadius")
             it.println("supportsBlursOnWindows: ${supportsBlursOnWindows()}")
-            it.println("dominantColor: ${Integer.toHexString(dominantColor)}")
-            it.println("vibrantColor: ${Integer.toHexString(vibrantColor)}")
-            it.println("mutedColor: ${Integer.toHexString(mutedColor)}")
             it.println("CROSS_WINDOW_BLUR_SUPPORTED: $CROSS_WINDOW_BLUR_SUPPORTED")
             it.println("isHighEndGfx: ${ActivityManager.isHighEndGfx()}")
         }

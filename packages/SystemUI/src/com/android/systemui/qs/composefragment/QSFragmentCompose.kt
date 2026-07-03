@@ -412,19 +412,19 @@ constructor(
         }.collectAsStateWithLifecycle(initialValue = emptyMap())
 
         val context = LocalContext.current
-        val prefs = remember { context.getSharedPreferences("qs_oneui_layout", Context.MODE_PRIVATE) }
         var hasLoadedLayout by remember { mutableStateOf(false) }
-        var lastSavedLayout by remember { mutableStateOf<String?>(null) }
 
         LaunchedEffect(Unit) {
-            // Prefs read + parsing off the main thread; first read blocks on disk.
+            // One-time migration: older builds mirrored the layout into the
+            // qs_oneui_layout prefs; QSSectionsRepository is the only store now.
+            val prefs = context.getSharedPreferences("qs_oneui_layout", Context.MODE_PRIVATE)
             val items = withContext(backgroundDispatcher) {
                 val saved = prefs.getString("layout", null)
                 if (saved.isNullOrEmpty()) {
                     null
                 } else {
                     try {
-                        saved to saved.split(";").mapNotNull { part ->
+                        saved.split(";").mapNotNull { part ->
                             val props = part.split(",")
                             if (props[0] == "header") {
                                 QSLayoutItem.SectionHeader(SectionType.valueOf(props[1]), props[2].toBoolean(), props.getOrNull(3)?.toFloat() ?: 2f)
@@ -438,36 +438,16 @@ constructor(
                     }
                 }
             }
-            if (items != null && items.second.isNotEmpty()) {
-                lastSavedLayout = items.first
-                viewModel.sectionEditModeViewModel.setFlatLayout(items.second)
+            if (!items.isNullOrEmpty()) {
+                viewModel.sectionEditModeViewModel.setFlatLayout(items)
+                prefs.edit().remove("layout").apply()
             }
             hasLoadedLayout = true
         }
 
         val flatLayout by viewModel.sectionEditModeViewModel.flatLayout.collectAsStateWithLifecycle(initialValue = QSLayoutItem.getDefault())
 
-        var isFirstLayoutEmission by remember { mutableStateOf(true) }
         var lastPushedSpecs by remember { mutableStateOf<Set<TileSpec>>(emptySet()) }
-
-        LaunchedEffect(flatLayout, hasLoadedLayout) {
-            if (hasLoadedLayout) {
-                if (isFirstLayoutEmission) {
-                    isFirstLayoutEmission = false
-                    return@LaunchedEffect
-                }
-                val str = flatLayout.joinToString(";") { item ->
-                    when (item) {
-                        is QSLayoutItem.SectionHeader -> "header,${item.type.name},${item.visible},${item.heightScale}"
-                        is QSLayoutItem.TileItem -> "tile,${item.spec.spec},${item.spanCols},${item.spanRows}"
-                    }
-                }
-                if (str != lastSavedLayout) {
-                    lastSavedLayout = str
-                    prefs.edit().putString("layout", str).apply()
-                }
-            }
-        }
 
         LaunchedEffect(flatLayout, insideTiles, hasLoadedLayout) {
             if (hasLoadedLayout) {

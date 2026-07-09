@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.filter
  */
 object WindowRootViewBinder {
     private const val TAG = "WindowRootViewBinder"
+    private val DEBUG = Log.isLoggable(TAG, Log.DEBUG)
 
     fun bind(
         view: WindowRootView,
@@ -48,7 +49,7 @@ object WindowRootViewBinder {
         if (SceneContainerFlag.isEnabled) return
 
         view.repeatWhenAttached(mainDispatcher) {
-            Log.d(TAG, "Binding root view")
+            if (DEBUG) Log.d(TAG, "Binding root view")
             view.viewModel(
                 minWindowLifecycleState = WindowLifecycleState.ATTACHED,
                 factory = { viewModelFactory.create() },
@@ -59,7 +60,9 @@ object WindowRootViewBinder {
                 }
                 blurChoreographer.registerOnBlurAppliedListener(onBlurApplied)
                 try {
-                    Log.d(TAG, "Launching coroutines that update window root view state")
+                    if (DEBUG) {
+                        Log.d(TAG, "Launching coroutines that update window root view state")
+                    }
                     launchTraced("early-wakeup") {
                         viewModel.isPersistentEarlyWakeupRequired.collect { wakeupRequired ->
                             blurChoreographer.setPersistentEarlyWakeup(wakeupRequired)
@@ -76,7 +79,9 @@ object WindowRootViewBinder {
                     awaitCancellation()
                 } finally {
                     blurChoreographer.clearOnBlurAppliedListener()
-                    Log.d(TAG, "Wrapped up coroutines that update window root view state")
+                    if (DEBUG) {
+                        Log.d(TAG, "Wrapped up coroutines that update window root view state")
+                    }
                 }
             }
         }

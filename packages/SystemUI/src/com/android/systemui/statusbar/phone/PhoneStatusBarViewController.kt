@@ -29,7 +29,7 @@ import android.view.WindowManager
 import android.os.VibrationEffect
 import androidx.annotation.VisibleForTesting
 import com.android.systemui.Gefingerpoken
-import com.android.systemui.globalactions.GlobalActionsDialogLite
+import com.android.systemui.globalactions.GlobalActionsComponent
 import com.android.systemui.display.dagger.SystemUIDisplaySubcomponent.DisplayAware
 import com.android.systemui.plugins.DarkIconDispatcher
 import com.android.systemui.res.R
@@ -92,7 +92,7 @@ private constructor(
     private val lazyShadeDisplaysRepository: Lazy<ShadeDisplaysRepository>,
     private val statusBarWindowControllerStore: StatusBarWindowControllerStore,
     private val tunerService: TunerService,
-    private val globalActionsDialog: GlobalActionsDialogLite,
+    private val globalActionsComponent: Lazy<GlobalActionsComponent>,
     private val windowManager: WindowManager,
 ) : ViewController<PhoneStatusBarView>(view), TunerService.Tunable {
 
@@ -246,9 +246,9 @@ private constructor(
         systemIconsPopupController = SystemIconsPopupController(
             context = context,
             windowManager = windowManager,
-            globalActionsDialog = globalActionsDialog
+            onShowPowerMenu = { globalActionsComponent.get().handleShowGlobalActionsMenu() }
         )
-        
+
         // Set up long click listener for system icons popup
         endSideContainer.setOnLongClickListener { toggleSystemIconsPopup() }
         endSideContainer.isLongClickable = true
@@ -567,7 +567,7 @@ private constructor(
         private val lazyShadeDisplaysRepository: Lazy<ShadeDisplaysRepository>,
         private val statusBarWindowControllerStore: StatusBarWindowControllerStore,
         private val tunerService: TunerService,
-        private val globalActionsDialog: GlobalActionsDialogLite,
+        private val globalActionsComponent: Lazy<GlobalActionsComponent>,
         private val windowManager: WindowManager,
     ) {
         fun create(view: PhoneStatusBarView): PhoneStatusBarViewController {
@@ -595,7 +595,7 @@ private constructor(
                 lazyShadeDisplaysRepository,
                 statusBarWindowControllerStore,
                 tunerService,
-                globalActionsDialog,
+                globalActionsComponent,
                 windowManager,
             )
         }

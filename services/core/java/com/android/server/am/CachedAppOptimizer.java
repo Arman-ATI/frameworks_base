@@ -396,7 +396,8 @@ public class CachedAppOptimizer {
         NONE, // No compaction
         SOME, // File compaction
         ANON, // Anon compaction
-        FULL // File+anon compaction
+        FULL, // File+anon compaction
+        POPULATE // Populate/prefetch compaction
     }
 
     // This indicates who initiated the compaction request
@@ -2322,6 +2323,10 @@ public class CachedAppOptimizer {
                         switch (opt.getReqCompactProfile()) {
                             case SOME:
                                 mCompactStatsManager.logSomeCompactionPerformed(compactSource,
+                                    name);
+                                break;
+                            case ANON:
+                                mCompactStatsManager.logAnonCompactionPerformed(compactSource,
                                     name);
                                 break;
                             case FULL:

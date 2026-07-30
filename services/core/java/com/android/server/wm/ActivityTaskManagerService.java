@@ -3816,6 +3816,11 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
             return;
         }
 
+        ActivityTaskManagerInternal atmInternal = LocalServices.getService(ActivityTaskManagerInternal.class);
+        if (atmInternal != null && atmInternal.isCallerRecents(Binder.getCallingUid())) {
+            return;
+        }
+
         if (checkCallingPermission(MANAGE_ACTIVITY_STACKS) == PackageManager.PERMISSION_GRANTED) {
             Slog.w(TAG, "MANAGE_ACTIVITY_STACKS is deprecated, "
                     + "please use alternative permission: MANAGE_ACTIVITY_TASKS");
@@ -4587,7 +4592,9 @@ public class ActivityTaskManagerService extends IActivityTaskManager.Stub {
     @EnforcePermission(allOf = {MANAGE_ACTIVITY_TASKS, READ_FRAME_BUFFER})
     @Override
     public ITaskSnapshotManager getTaskSnapshotManager() {
-        getTaskSnapshotManager_enforcePermission();
+        if (!isCallerRecents(Binder.getCallingUid())) {
+            getTaskSnapshotManager_enforcePermission();
+        }
         return mWindowManager.mSnapshotController.mSnapshotManagerService;
     }
 

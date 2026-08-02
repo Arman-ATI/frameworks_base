@@ -2466,13 +2466,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             case PLAY_PAUSE_MUSIC:
                 triggerVirtualKeypress(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
                 break;
-            case SCREENSHOT:
-                takeScreenshot(TAKE_SCREENSHOT_FULLSCREEN, SCREENSHOT_KEY_OTHER);
-                notifyKeyGestureCompleted(event, KeyGestureEvent.KEY_GESTURE_TYPE_TAKE_SCREENSHOT);
-                break;
-            case PARTIAL_SCREENSHOT:
-                takeScreenshot(TAKE_SCREENSHOT_SELECTED_REGION, SCREENSHOT_KEY_OTHER);
-                notifyKeyGestureCompleted(event, KeyGestureEvent.KEY_GESTURE_TYPE_TAKE_SCREENSHOT);
             case TORCH:
                 toggleTorch();
                 break;
@@ -8265,10 +8258,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 // do nothing.
             }
         }
-    }
-
-    private void takeScreenshot(int type, int source) {
-        mScreenshotHelper.takeScreenshot(type, source, mHandler, null);
     }
 
     private void toggleRingerModes() {

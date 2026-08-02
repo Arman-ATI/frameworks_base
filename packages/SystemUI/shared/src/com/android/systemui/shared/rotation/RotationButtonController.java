@@ -242,7 +242,7 @@ public class RotationButtonController {
             Settings.System.ENABLE_ROTATION_BUTTON, 1, UserHandle.USER_CURRENT) == 1;
         mContext.getContentResolver().registerContentObserver(
             Settings.System.getUriFor(Settings.System.ENABLE_ROTATION_BUTTON), false,
-            new ContentObserver(mMainThreadHandler) {
+            new ContentObserver(mUiHandler) {
                 @Override
                 public void onChange(boolean selfChange, Uri uri) {
                     if (uri.getLastPathSegment().equals(Settings.System.ENABLE_ROTATION_BUTTON)) {

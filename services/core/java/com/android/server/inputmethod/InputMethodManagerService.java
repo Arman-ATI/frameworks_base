@@ -1839,7 +1839,8 @@ public final class InputMethodManagerService implements IInputMethodManagerImpl.
         synchronized (ImfLock.class) {
             selectedImeId = bindingController.getSelectedImeId();
         }
-        InputMethodInfo originalImi = InputMethodSettingsRepository.get(userId).getMethodMap().get(selectedImeId);
+        final var settings = InputMethodSettingsRepository.get(userId);
+        InputMethodInfo originalImi = settings.getMethodMap().get(selectedImeId);
         final int callingUid = Binder.getCallingUid();
         String[] clientPackages = mContext.getPackageManager().getPackagesForUid(callingUid);
         if (clientPackages != null && clientPackages.length > 0) {

@@ -155,14 +155,14 @@ interface Vote {
     int PRIORITY_PROXIMITY = 23;
 
     // User preferred refresh rate for specific apps
-    int PRIORITY_USER_PREFERRED = 23;
+    int PRIORITY_USER_PREFERRED = 24;
 
     // Force display to requested refresh rate in MEMC mode
-    int PRIORITY_MEMC = 24;
+    int PRIORITY_MEMC = 25;
 
     // The Under-Display Fingerprint Sensor (UDFPS) needs the refresh rate to be locked in order
     // to function, so this needs to be the highest priority of all votes.
-    int PRIORITY_UDFPS = 25;
+    int PRIORITY_UDFPS = 26;
 
     @IntDef(prefix = { "PRIORITY_" }, value = {
             PRIORITY_DEFAULT_RENDER_FRAME_RATE,

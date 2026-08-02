@@ -687,11 +687,10 @@ public class DefaultTransitionHandler implements Transitions.TransitionHandler {
 
             long longestDurationMs = 0L;
             for (int i = 0; i < animations.size(); ++i) {
-                final Animator a = animations.get(i);
-                if (a instanceof ValueAnimator va) {
-                    final long d = va.getDuration();
-                    if (d > longestDurationMs) longestDurationMs = d;
-                }
+                final WindowAnimation a = animations.get(i);
+                final ValueAnimator va = a.getAnimator();
+                final long d = va.getDuration();
+                if (d > longestDurationMs) longestDurationMs = d;
             }
             if (longestDurationMs > 0L) {
                 PowerManagerInternal pmi = LocalServices.getService(PowerManagerInternal.class);

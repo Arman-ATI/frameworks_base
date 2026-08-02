@@ -19658,12 +19658,16 @@ package android.hardware {
 
   @Deprecated public static class Camera.Face {
     ctor @Deprecated public Camera.Face();
+    field @Deprecated public int blinkDetected;
+    field @Deprecated public int faceRecognised;
     field @Deprecated public int id;
     field @Deprecated public android.graphics.Point leftEye;
     field @Deprecated public android.graphics.Point mouth;
     field @Deprecated public android.graphics.Rect rect;
     field @Deprecated public android.graphics.Point rightEye;
     field @Deprecated public int score;
+    field @Deprecated public int smileDegree;
+    field @Deprecated public int smileScore;
   }
 
   @Deprecated public static interface Camera.FaceDetectionListener {
@@ -34875,6 +34879,7 @@ package android.os {
     field public static final String EXTRA_HEALTH = "health";
     field public static final String EXTRA_ICON_SMALL = "icon-small";
     field public static final String EXTRA_LEVEL = "level";
+    field public static final String EXTRA_OEM_CHARGER = "oem_charger";
     field public static final String EXTRA_PLUGGED = "plugged";
     field public static final String EXTRA_PRESENT = "present";
     field public static final String EXTRA_SCALE = "scale";

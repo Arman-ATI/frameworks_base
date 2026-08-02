@@ -3484,7 +3484,7 @@ public class ActivityManagerService extends IActivityManager.Stub
         ProcessRecord gameProc = getProcessRecord(str);
         return gameProc != null
             && gameProc.getThread() != null
-            && gameProc.getCurrentSchedulingGroup() == ProcessList.SCHED_GROUP_TOP_APP;
+            && gameProc.getCurrentSchedulingGroup() == SCHED_GROUP_TOP_APP;
     }
 
     @GuardedBy(anyOf = {"this", "mProcLock"})

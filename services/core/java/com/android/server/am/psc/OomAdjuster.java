@@ -168,6 +168,7 @@ import com.android.server.ServiceThread;
 import com.android.server.am.ActivityManagerServiceDumpProcessesProto;
 import com.android.server.am.EventLogTags;
 import com.android.server.am.Flags;
+import com.android.server.am.ProcessFreezerManager;
 import com.android.server.am.ProcessList;
 import com.android.server.am.UidRecord;
 import com.android.server.am.psc.Constants.OomAdjust;
@@ -2315,15 +2316,15 @@ public abstract class OomAdjuster {
         ProcessFreezerManager freezer = ProcessFreezerManager.getInstance();
         if (freezer != null && freezer.useFreezerManager()) {
             // unfreeze process if user press home key before the first frame appeared
-            if ((state.getSetAdj() >= ProcessList.FOREGROUND_APP_ADJ &&
-                        state.getSetAdj() <= ProcessList.VISIBLE_APP_ADJ) &&
-                        state.getCurAdj() > ProcessList.VISIBLE_APP_ADJ) {
+            if ((state.getSetAdj() >= FOREGROUND_APP_ADJ &&
+                        state.getSetAdj() <= VISIBLE_APP_ADJ) &&
+                        state.getCurAdj() > VISIBLE_APP_ADJ) {
                 freezer.startUnfreeze(state.processName,
                         ProcessFreezerManager.INTERRUPT_LAUNCH_UNFREEZE);
             }
             // check whether process/service that launching app depend on is in the freeze list
             if (state.getSetAdj() >= state.getCurAdj() &&
-                        state.getCurAdj() <= ProcessList.VISIBLE_APP_ADJ) {
+                        state.getCurAdj() <= VISIBLE_APP_ADJ) {
                 if (freezer.checkNeedFreezeProcessLocked(state)) {
                     freezer.startUnfreezeService(state,
                             ProcessFreezerManager.DEPEND_LAUNCH_UNFREEZE);

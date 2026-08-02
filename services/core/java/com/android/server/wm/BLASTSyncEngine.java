@@ -413,11 +413,11 @@ class BLASTSyncEngine {
             for (int i = mRootMembers.size() - 1; i >= 0; --i) {
                 final WindowContainer<?> wc = mRootMembers.valueAt(i);
                 if (wc.isSyncFinished(this)) {
-                    continue;
                     ActivityRecord r = wc.asActivityRecord();
                     if (r != null) {
                         r.checkSyncTimeout(this);
                     }
+                    continue;
                 }
                 allFinished = false;
                 Slog.i(TAG, "Unfinished container: " + wc);

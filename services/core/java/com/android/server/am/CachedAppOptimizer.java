@@ -59,6 +59,7 @@ import static com.android.server.am.ActivityManagerDebugConfig.DEBUG_WRITEBACK;
 import static com.android.server.am.ActivityManagerDebugConfig.TAG_AM;
 import static com.android.server.am.psc.Constants.CACHED_APP_MAX_ADJ;
 import static com.android.server.am.psc.Constants.CACHED_APP_MIN_ADJ;
+import static com.android.server.am.psc.Constants.FOREGROUND_APP_ADJ;
 import static com.android.server.am.psc.Constants.PERCEPTIBLE_APP_ADJ;
 
 import android.annotation.IntDef;
@@ -418,7 +419,7 @@ public class CachedAppOptimizer {
     static final int DEADLOCK_WATCHDOG_MSG = 7;
     static final int BINDER_ERROR_MSG = 8;
     static final int ZRAM_WRITEBACK_MSG = 9;
-    static final int COMPACT_APP_SWITCH_MSG = 9;
+    static final int COMPACT_APP_SWITCH_MSG = 10;
 
     // When free swap falls below this percentage threshold any full (file + anon)
     // compactions will be downgraded to file only compactions to reduce pressure
@@ -1711,15 +1712,15 @@ public class CachedAppOptimizer {
                 mCompactionHandler.removeMessages(COMPACT_APP_SWITCH_MSG, app);
             }
 
-            if (newAdj >= ProcessList.CACHED_APP_MIN_ADJ
-                    && oldAdj < ProcessList.CACHED_APP_MIN_ADJ) {
+            if (newAdj >= CACHED_APP_MIN_ADJ
+                    && oldAdj < CACHED_APP_MIN_ADJ) {
                 mCompactionHandler.sendMessageDelayed(
                         mCompactionHandler.obtainMessage(COMPACT_APP_SWITCH_MSG, app),
                         APP_SWITCH_COMPACT_DELAY_MS);
             }
 
-            if (newAdj <= ProcessList.FOREGROUND_APP_ADJ
-                    && oldAdj > ProcessList.FOREGROUND_APP_ADJ) {
+            if (newAdj <= FOREGROUND_APP_ADJ
+                    && oldAdj > FOREGROUND_APP_ADJ) {
                 mLastAppLaunchUptime = SystemClock.uptimeMillis();
             }
         }
@@ -2418,7 +2419,7 @@ public class CachedAppOptimizer {
                         break;
                     }
                     synchronized (mProcLock) {
-                        if (proc.getCurAdj() >= ProcessList.CACHED_APP_MIN_ADJ) {
+                        if (proc.getCurAdj() >= CACHED_APP_MIN_ADJ) {
                             compactApp(proc, CompactProfile.ANON, CompactSource.APP, false);
                         }
                     }

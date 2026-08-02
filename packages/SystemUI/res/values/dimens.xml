@@ -414,6 +414,7 @@
     <!-- Extra horizontal space for properly aligning guts buttons with the notification content -->
     <dimen name="notification_guts_button_side_margin">8dp</dimen>
     <dimen name="notification_guts_conversation_icon_size">56dp</dimen>
+    <dimen name="notification_guts_header_top_padding">12dp</dimen>
     <!-- The vertical space between items in the alert selections in the inline settings -->
     <dimen name="notification_guts_option_vertical_padding">16dp</dimen>
 
@@ -429,6 +430,7 @@
 
     <dimen name="notification_2025_min_tap_target_size">48dp</dimen>
 
+    <dimen name="notification_importance_toggle_size">48dp</dimen>
     <dimen name="notification_importance_button_separation">8dp</dimen>
     <dimen name="notification_importance_drawable_padding">8dp</dimen>
     <dimen name="notification_importance_header_text">12sp</dimen>
@@ -564,6 +566,8 @@
     <!-- The height of the container that holds the system icons in the quick settings header in the
          car setting. -->
     <dimen name="car_qs_header_system_icons_area_height">54dp</dimen>
+
+    <dimen name="qs_footer_action_corner_radius">20dp</dimen>
 
     <!-- (48dp - 40dp) / 2 -->
     <dimen name="qs_footer_action_inset">4dp</dimen>

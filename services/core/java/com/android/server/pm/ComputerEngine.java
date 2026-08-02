@@ -1206,6 +1206,15 @@ public class ComputerEngine implements Computer {
         return new ParceledListSlice<>(appList);
     }
 
+    public PackageInfoList recreatePackageList(
+            int callingUid, Context context, int userId, PackageInfoList list) {
+        List<PackageInfo> appList = new ArrayList<>(list.getList());
+        List<String> disabledLaunchers = QuickSwitchService.getDisabledDefaultLaunchers();
+        appList.removeIf(info -> disabledLaunchers.contains(info.packageName));
+        appList.removeIf(info -> isAppDetached(info.packageName));
+        return new PackageInfoList(appList);
+    }
+
     public List<ApplicationInfo> recreateApplicationList(
             int callingUid, Context context, int userId, List<ApplicationInfo> list) {
         List<ApplicationInfo> appList = new ArrayList<>(list);

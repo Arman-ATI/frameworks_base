@@ -2562,9 +2562,8 @@ public final class ProcessList extends ProcessListInternal
                     && (UserHandle.isApp(app.uid) || UserHandle.isIsolated(app.uid)
                         || app.isSdkSandbox
                         || (enablePccFrameworkSupport() && Process.isPrivateComputeCoreUid(uid)))
-                        || app.isSdkSandbox)
                     && (sandboxDataIsolation
-                        || mPlatformCompat.isChangeEnabled(APP_DATA_DIRECTORY_ISOLATION, app.info);
+                        || mPlatformCompat.isChangeEnabled(APP_DATA_DIRECTORY_ISOLATION, app.info));
 
             // Get all packages belongs to the same shared uid. sharedPackages is empty array
             // if it doesn't have shared uid.

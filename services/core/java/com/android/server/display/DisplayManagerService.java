@@ -4187,10 +4187,8 @@ public final class DisplayManagerService extends SystemService {
             @Override
             public void onLockTaskModeChanged(int mode) {
                 synchronized (mSyncRoot) {
-                    if (mFlags.isDisplayMirrorInLockTaskModeEnabled()) {
-                        updateMirrorBuiltInDisplaySettingLocked(
-                                /*shouldSendDisplayChangeEvent=*/ true);
-                    }
+                    updateMirrorBuiltInDisplaySettingLocked(
+                            /*shouldSendDisplayChangeEvent=*/ true);
                 }
             }
 

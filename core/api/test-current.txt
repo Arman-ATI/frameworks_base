@@ -1928,7 +1928,12 @@ package android.hardware.display {
     method public boolean alwaysOnEnabled(int);
     method public void disableDozeSettings(boolean, int);
     method public void disableDozeSettings(int);
+    method public boolean dozeProximitySensorAvailable();
+    method public boolean dozeTiltSensorAvailable();
+    method public boolean handwaveGestureEnabled(int);
+    method public boolean pocketGestureEnabled(int);
     method public void restoreDozeSettings(int);
+    method public boolean tiltGestureEnabled(int);
   }
 
   public final class ColorDisplayManager {

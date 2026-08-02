@@ -702,7 +702,7 @@ final class UpdatableFontDir {
             FontConfig fontConfig = getSystemFontConfig();
             if (axFontFeatureSupport) {
                 putFontFileInfo(fontFileInfo);
-            } else if (!addFileToMapIfSameOrNewer(fontFileInfo, fontConfig, false)) {
+            } else if (!addFileToMapIfSameOrNewer(fontFileInfo, null, fontConfig, false)) {
                 throw new SystemFontException(
                         FontManager.RESULT_ERROR_DOWNGRADING,
                         "Downgrading font file is forbidden.");

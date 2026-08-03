@@ -117,19 +117,10 @@ sealed class BatteryViewModel(
             interactor.isCritical,
             interactor.tintStatusBarIconsWithAccent,
             interactor.themeChanged,
-            interactor.batteryIconStyle,
-        ) { attr, isCritical, useAccentColor, _, iconStyle ->
-            val isTextStyle = iconStyle == BatteryRepository.ICON_STYLE_TEXT
-            val percentNextToIcon = interactor.showPercentNextToIcon.value
-            val percentInsideIcon = !isTextStyle && !percentNextToIcon
-            val isExternalText = isTextStyle || percentNextToIcon
-            val baseProfile: ColorProfile = if (isExternalText) {
-                ColorProfile(
-                    dark = BatteryColors.DarkTheme.Default,
-                    light = BatteryColors.LightTheme.Default,
-                )
-            } else {
-                when (attr) {
+            interactor.showPercentInsideIcon,
+        ) { attr, isCritical, useAccentColor, _, percentInsideIcon ->
+            val result: ColorProfile
+            val baseProfile: ColorProfile = when (attr) {
                 Charging,
                 Defend ->
                     ColorProfile(
@@ -155,10 +146,9 @@ sealed class BatteryViewModel(
                             light = BatteryColors.LightTheme.Default,
                         )
                     }
-                }
             }
             
-            val result: ColorProfile = if (useAccentColor) {
+            result = if (useAccentColor) {
                 val accentColorInt = Utils.getColorAccentDefaultColor(context)
                 if (percentInsideIcon) {
                     val (accentLight, accentDark) =

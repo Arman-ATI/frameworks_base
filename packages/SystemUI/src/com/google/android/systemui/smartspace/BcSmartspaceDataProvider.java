@@ -101,7 +101,6 @@ public final class BcSmartspaceDataProvider implements BcSmartspaceDataPlugin {
         mSmartspaceTargetListeners.forEach(listener -> listener.onSmartspaceTargetsUpdated(mSmartspaceTargets));
     }
 
-    @Override
     public void registerConfigProvider(BcSmartspaceConfigPlugin configPlugin) {
         mConfigProvider = configPlugin;
     }

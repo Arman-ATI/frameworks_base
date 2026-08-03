@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,4 +18,10 @@ package com.android.systemui.plugins
 
 // TODO(b/265360975): Evaluate this plugin approach.
 /** Plugin to provide BC smartspace configuration */
-interface BcSmartspaceConfigPlugin {}
+interface BcSmartspaceConfigPlugin {
+    fun isViewPager2Enabled(): Boolean = false
+
+    fun isSwipeEventLoggingEnabled(): Boolean = false
+
+    fun isDefaultDateWeatherDisabled(): Boolean = false
+}

@@ -264,7 +264,6 @@ private constructor(
         }
 
         mView.setExtraStatusBarPaddingDp(extraStartDp, extraTopDp, extraEndDp)
->>>>>>> 63f07857d790 (SystemUI: Allow tuning extra padding for statusbar layout [1/2])
     }
 
     private fun addCursorSupportToIconContainers() {

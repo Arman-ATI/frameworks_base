@@ -70,10 +70,10 @@ fun VolumePanelButton(
                     .height(56.dp)
                     .semantics(properties = semantics),
             color =
-                if (isEnabled && isActive) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    AxBlurSurfaceDefaults.surfaceColor()
+                when {
+                    !isEnabled -> MaterialTheme.colorScheme.surfaceContainerHighest
+                    isActive -> MaterialTheme.colorScheme.primary
+                    else -> MaterialTheme.colorScheme.surfaceContainerHigh
                 },
             shape = RoundedCornerShape(28.dp),
             contentColor =

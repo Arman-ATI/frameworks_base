@@ -60,7 +60,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.SharingStarted
 import android.provider.Settings
 import android.os.UserHandle
-import com.android.internal.util.lunaris.Utils
+import com.android.internal.util.android.Utils
 
 object DeviceEntryIconViewBinder {
     private const val TAG = "DeviceEntryIconViewBinder"

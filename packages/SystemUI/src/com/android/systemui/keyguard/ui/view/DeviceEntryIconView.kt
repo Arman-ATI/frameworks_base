@@ -80,7 +80,7 @@ constructor(
 
     private val fingerprintDrawable: UdfpsIconDrawable = UdfpsFpIconDrawable(context)
 
-    private val packageInstalled = com.android.internal.util.lunaris.Utils.isPackageInstalled(
+    private val packageInstalled = com.android.internal.util.android.Utils.isPackageInstalled(
         context, "com.lunaris.udfps.icons"
     )
 

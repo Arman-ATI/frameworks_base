@@ -105,11 +105,11 @@ class ScreenRecordingPreferenceRepository(
     }
 
     private fun setShowSeconds(isOn: Boolean) {
-        secureSettingsPutInt(Clock.CLOCK_SECONDS, if (isOn) 1 else 0)
+        secureSettingsPutInt(Clock.STATUS_BAR_CLOCK_SECONDS, if (isOn) 1 else 0)
     }
 
     private fun getShowSeconds(): Boolean {
-        return secureSettingsGetInt(Clock.CLOCK_SECONDS) != 0
+        return secureSettingsGetInt(Clock.STATUS_BAR_CLOCK_SECONDS) != 0
     }
 
     private companion object {

@@ -51,7 +51,7 @@ data class BundleSpec(
             BundleSpec(
                 key = ESSENTIAL_KEY,
                 titleText = com.android.systemui.res.R.string.essential_notifications_title,
-                summaryText = com.android.systemui.res.R.string.essential_notifications_summary,
+                summaryTextRes = com.android.systemui.res.R.string.essential_notifications_summary,
                 icon = com.android.systemui.res.R.drawable.ic_important_outline,
                 bucket = BUCKET_ESSENTIAL,
                 bundleType = Adjustment.TYPE_OTHER,

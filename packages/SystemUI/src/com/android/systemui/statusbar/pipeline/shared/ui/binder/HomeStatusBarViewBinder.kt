@@ -119,8 +119,8 @@ class HomeStatusBarViewBinderImpl @Inject constructor() : HomeStatusBarViewBinde
         val notificationIconsArea = view.requireViewById<View>(R.id.notificationIcons)
 
         val leftPaddingInit = leftClock.capturePadding()
-        val centerPaddingInit = centerClock.capturePadding()
-        val rightPaddingInit = rightClock.capturePadding()
+        val centerPaddingInit = centerClock?.capturePadding()
+        val rightPaddingInit = rightClock?.capturePadding()
 
         // GONE because this shouldn't take space in the layout
         systemInfoView.hideInitially()
@@ -593,19 +593,19 @@ class HomeStatusBarViewBinderImpl @Inject constructor() : HomeStatusBarViewBinde
     private fun applyClockChip(
         context: Context,
         chipStyle: Int,
-        activeClock: Clock,
+        activeClock: Clock?,
         leftClock: Clock,
-        centerClock: Clock,
-        rightClock: Clock,
+        centerClock: Clock?,
+        rightClock: Clock?,
         leftPaddingInit: Padding,
-        centerPaddingInit: Padding,
-        rightPaddingInit: Padding,
+        centerPaddingInit: Padding?,
+        rightPaddingInit: Padding?,
         gradientStartColor: Int = Color.parseColor("#FF6B6B"),
         gradientEndColor: Int = Color.parseColor("#4ECDC4"),
         gradientAngle: Float = 0f,
         gradientMaskText: Boolean = false,
     ) {
-        fun reset(clock: Clock, padding: Padding) {
+        fun reset(clock: Clock?, padding: Padding?) {
             if (clock == null || padding == null) return
             clock.setBackgroundResource(0)
             clock.setPaddingRelative(padding.start, padding.top, padding.end, padding.bottom)
@@ -664,11 +664,12 @@ class HomeStatusBarViewBinderImpl @Inject constructor() : HomeStatusBarViewBinde
         reset(rightClock, rightPaddingInit)
 
         if (chipStyle == 0) return
+        val clockForChip = activeClock ?: return
 
         if (chipStyle == CHIP_STYLE_CUSTOM_GRADIENT) {
-            applyGradient(activeClock, gradientStartColor, gradientEndColor, gradientAngle, context, maskTextMode = gradientMaskText)
+            applyGradient(clockForChip, gradientStartColor, gradientEndColor, gradientAngle, context, maskTextMode = gradientMaskText)
         } else {
-            apply(activeClock, chipStyle)
+            apply(clockForChip, chipStyle)
         }
     }
 

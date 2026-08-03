@@ -300,7 +300,7 @@ constructor(
     }
 
     override val isStackable: State<Boolean> =
-        if (NewStatusBarIcons.isEnabled && StatusBarRootModernization.isEnabled) {
+        if (NewStatusBarIcons.isEnabled) {
             combine(
                 icons.flatMap { iconsBySubId: Map<Int, MobileIconInteractorKairos> ->
                     iconsBySubId.values

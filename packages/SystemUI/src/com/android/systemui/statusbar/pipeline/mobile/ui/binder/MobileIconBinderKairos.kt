@@ -149,7 +149,7 @@ object MobileIconBinderKairos {
 
         val isVisible = viewModel.isVisible.sample()
 
-        var lastCellularIconKairos: SignalIconModel.Cellular? = null
+        var lastCellularIconKairos: SignalIconModel.CellularTypeIconModel? = null
         val refreshCallbackKairos = Runnable {
             val icon = lastCellularIconKairos ?: return@Runnable
             val themed = ThemeIconController

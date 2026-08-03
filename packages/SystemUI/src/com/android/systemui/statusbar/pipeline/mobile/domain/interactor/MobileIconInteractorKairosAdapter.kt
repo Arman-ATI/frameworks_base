@@ -23,6 +23,7 @@ import com.android.systemui.statusbar.pipeline.mobile.data.model.NetworkNameMode
 import com.android.systemui.statusbar.pipeline.mobile.domain.model.NetworkTypeIconModel
 import com.android.systemui.statusbar.pipeline.mobile.domain.model.SignalIconModel
 import com.android.systemui.statusbar.pipeline.shared.data.model.DataActivityModel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 fun BuildScope.MobileIconInteractorKairosAdapter(
@@ -130,8 +131,7 @@ fun BuildScope.MobileIconInteractorKairosAdapter(
                         }
                 ),
             isRoamingForceHidden =
-                isRoamingForceHidden.toColdConflatedFlow(
-                    kairosNetwork,
+                isRoamingForceHidden.toStateFlow(
                     nameTag {
                         "MobileIconInteractorKairosAdapter(subId=$subscriptionId).isRoamingForceHidden"
                     },

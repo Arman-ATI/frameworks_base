@@ -132,7 +132,7 @@ object MobileIconBinder {
 
                     // Set the icon for the triangle
                     launch {
-                        var lastCellularIcon: SignalIconModel.Cellular? = null
+                        var lastCellularIcon: SignalIconModel.CellularTypeIconModel? = null
 
                         val refreshCallback = Runnable {
                             val icon = lastCellularIcon ?: return@Runnable

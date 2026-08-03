@@ -101,12 +101,10 @@ constructor(
                     }
 
                     override fun onAnimationStart(animation: Animator) {
-                        if (!ambientAod()) {
-                            if (dozeParameters.get().isMinModeActive()) {
-                                lightRevealScrim.revealEffect = LiftReveal
-                            } else {
-                                lightRevealScrim.revealEffect = revealEffect
-                            }
+                        if (dozeParameters.get().isMinModeActive()) {
+                            lightRevealScrim.revealEffect = LiftReveal
+                        } else {
+                            lightRevealScrim.revealEffect = revealEffect
                         }
                         interactionJankMonitor.begin(
                             notifShadeWindowControllerLazy.get().windowRootView,

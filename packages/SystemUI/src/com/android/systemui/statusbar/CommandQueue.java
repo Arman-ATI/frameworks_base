@@ -1615,6 +1615,7 @@ public class CommandQueue extends IStatusBar.Stub implements
     @Override
     public void onConfigurationChanged() throws RemoteException {
         mHandler.obtainMessage(MSG_ON_CONFIGURATION_CHANGED).sendToTarget();
+    }
 
     @Override
     public void restartSystemUI() {
@@ -2196,6 +2197,9 @@ public class CommandQueue extends IStatusBar.Stub implements
                 case MSG_ON_CONFIGURATION_CHANGED:
                     for (Callbacks callback : mCallbacks) {
                         callback.onConfigurationChanged();
+                    }
+                    break;
+
                 case MSG_RESTART_SYSTEMUI:
                     for (int i = 0; i < mCallbacks.size(); i++) {
                         mCallbacks.get(i).restartSystemUI();

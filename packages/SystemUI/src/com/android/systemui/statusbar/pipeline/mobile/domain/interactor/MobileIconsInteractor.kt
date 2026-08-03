@@ -327,7 +327,7 @@ constructor(
             .stateIn(scope, SharingStarted.WhileSubscribed(), emptyList())
 
     override val isStackable: StateFlow<Boolean> =
-        if (NewStatusBarIcons.isEnabled && StatusBarRootModernization.isEnabled) {
+        if (NewStatusBarIcons.isEnabled) {
             icons.flatMapLatest { iconsList ->
                 when {
                     iconsList.isEmpty() -> flowOf(false)

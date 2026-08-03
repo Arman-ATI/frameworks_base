@@ -103,8 +103,6 @@ import android.widget.ImageView.ScaleType;
 import android.widget.LinearLayout;
 import android.widget.ListPopupWindow;
 import android.widget.TextView;
-import android.window.BackEvent;
-import android.window.OnBackAnimationCallback;
 import android.window.OnBackInvokedCallback;
 import android.window.OnBackInvokedDispatcher;
 
@@ -3407,37 +3405,6 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
             dialog.getOnBackInvokedDispatcher()
                     .unregisterOnBackInvokedCallback(mOnBackInvokedCallback);
             if (DEBUG) Log.d(TAG, "OnBackInvokedCallback handler unregistered");
-        }
-
-        private void updateBackAnimation(BackEvent backEvent) {
-            float progress = Interpolators.BACK_GESTURE.getInterpolation(backEvent.getProgress());
-            float scale = 1f - progress * (1f - BACK_ANIMATION_MIN_SCALE);
-            DisplayMetrics displayMetrics = mGlobalActionsLayout.getResources().getDisplayMetrics();
-            float maxMarginPx = TypedValue.applyDimension(
-                    TypedValue.COMPLEX_UNIT_DIP, BACK_ANIMATION_MARGIN_DP, displayMetrics);
-            float maxTranslationX = (displayMetrics.widthPixels
-                    - displayMetrics.widthPixels * BACK_ANIMATION_MIN_SCALE) * 0.5f - maxMarginPx;
-            float maxTranslationY = (displayMetrics.heightPixels
-                    - displayMetrics.heightPixels * BACK_ANIMATION_MIN_SCALE) * 0.5f - maxMarginPx;
-            float touchY = backEvent.getTouchY();
-            float progressY = Float.isNaN(touchY) || Float.isNaN(mBackStartY)
-                    ? 0f
-                    : (touchY - mBackStartY) / displayMetrics.heightPixels;
-            int direction = backEvent.getSwipeEdge() == BackEvent.EDGE_LEFT
-                    ? 1
-                    : backEvent.getSwipeEdge() == BackEvent.EDGE_RIGHT ? -1 : 0;
-            mGlobalActionsLayout.setTranslationX(progress * direction * maxTranslationX);
-            mGlobalActionsLayout.setTranslationY(progressY * maxTranslationY);
-            mGlobalActionsLayout.setScaleX(scale);
-            mGlobalActionsLayout.setScaleY(scale);
-        }
-
-        private void resetBackAnimation() {
-            mBackStartY = Float.NaN;
-            mGlobalActionsLayout.setTranslationX(0f);
-            mGlobalActionsLayout.setTranslationY(0f);
-            mGlobalActionsLayout.setScaleX(1f);
-            mGlobalActionsLayout.setScaleY(1f);
         }
 
         private void logOnBackInvocation() {

@@ -18,15 +18,10 @@ import static com.android.settingslib.flags.Flags.newStatusBarIcons;
 import static com.android.systemui.plugins.DarkIconDispatcher.getTint;
 
 import android.animation.ArgbEvaluator;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.ColorStateList;
-import android.database.ContentObserver;
 import android.graphics.Color;
 import android.graphics.Rect;
-import android.os.Handler;
-import android.os.UserHandle;
-import android.provider.Settings;
 import android.util.ArrayMap;
 import android.view.Display;
 import android.widget.ImageView;
@@ -35,8 +30,6 @@ import com.android.systemui.display.dagger.SystemUIDisplaySubcomponent.DisplayAw
 import com.android.systemui.display.dagger.SystemUIDisplaySubcomponent.LifecycleListener;
 import com.android.systemui.display.dagger.SystemUIDisplaySubcomponent.PerDisplaySingleton;
 import com.android.systemui.dump.DumpManager;
-import com.android.systemui.statusbar.policy.ConfigurationController;
-import com.android.settingslib.Utils;
 
 import kotlinx.coroutines.flow.FlowKt;
 import kotlinx.coroutines.flow.MutableStateFlow;
@@ -52,16 +45,12 @@ import javax.inject.Inject;
  */
 @PerDisplaySingleton
 public class DarkIconDispatcherImpl implements SysuiDarkIconDispatcher,
-        LightBarTransitionsController.DarkIntensityApplier, LifecycleListener,
-        ConfigurationController.ConfigurationListener {
+        LightBarTransitionsController.DarkIntensityApplier, LifecycleListener {
 
     private final LightBarTransitionsController mTransitionsController;
     private final ArrayList<Rect> mTintAreas = new ArrayList<>();
     private final ArrayMap<Object, DarkReceiver> mReceivers = new ArrayMap<>();
     private final DumpManager mDumpManager;
-    private final Context mContext;
-    private final ContentObserver mSettingsObserver;
-    private final ConfigurationController mConfigurationController;
 
     private int mIconTint = DEFAULT_ICON_TINT;
     private int mContrastTint = DEFAULT_INVERSE_ICON_TINT;
@@ -83,20 +72,8 @@ public class DarkIconDispatcherImpl implements SysuiDarkIconDispatcher,
             @DisplayAware int displayId,
             @DisplayAware Context context,
             LightBarTransitionsController.Factory lightBarTransitionsControllerFactory,
-            DumpManager dumpManager,
-            ConfigurationController configurationController) {
-        mContext = context;
+            DumpManager dumpManager) {
         mDumpManager = dumpManager;
-        mConfigurationController = configurationController;
-        
-        // Create ContentObserver to watch for setting changes
-        mSettingsObserver = new ContentObserver(new Handler()) {
-            @Override
-            public void onChange(boolean selfChange) {
-                // Re-apply dark intensity when setting changes
-                applyDarkIntensity(mDarkIntensity);
-            }
-        };
         if (newStatusBarIcons()) {
             mDarkModeIconColorSingleTone = Color.BLACK;
             mLightModeIconColorSingleTone = Color.WHITE;
@@ -111,27 +88,11 @@ public class DarkIconDispatcherImpl implements SysuiDarkIconDispatcher,
 
         mDumpableName = getDumpableName(displayId);
         dumpManager.registerNormalDumpable(mDumpableName, this);
-        
-        // Register ContentObserver to watch for setting changes
-        mContext.getContentResolver().registerContentObserver(
-                Settings.System.getUriFor(Settings.System.TINT_STATUSBAR_ICONS_WITH_ACCENT),
-                false, mSettingsObserver, UserHandle.USER_ALL);
-        
-        // Register ConfigurationListener to watch for theme changes
-        mConfigurationController.addCallback(this);
-        
-        // Apply initial tinting to ensure persistence after reboot
-        // Use a post to ensure ContentResolver is fully initialized
-        new Handler().post(() -> applyDarkIntensity(0.0f));
     }
 
     @Override
     public void stop() {
         mDumpManager.unregisterDumpable(mDumpableName);
-        // Unregister ContentObserver
-        mContext.getContentResolver().unregisterContentObserver(mSettingsObserver);
-        // Unregister ConfigurationListener
-        mConfigurationController.removeCallback(this);
     }
 
     private String getDumpableName(int displayId) {
@@ -199,25 +160,10 @@ public class DarkIconDispatcherImpl implements SysuiDarkIconDispatcher,
         mDarkIntensity = darkIntensity;
         ArgbEvaluator evaluator = ArgbEvaluator.getInstance();
 
-        // Check if accent color tinting is enabled
-        boolean useAccentColor = Settings.System.getIntForUser(
-                mContext.getContentResolver(),
-                Settings.System.TINT_STATUSBAR_ICONS_WITH_ACCENT,
-                0,
-                UserHandle.USER_CURRENT) == 1;
-
-        if (useAccentColor) {
-            // Use system accent color for tinting
-            int accentColor = Utils.getColorAccentDefaultColor(mContext);
-            mIconTint = accentColor;
-            mContrastTint = accentColor;
-        } else {
-            // Use default behavior
-            mIconTint = (int) evaluator.evaluate(darkIntensity,
-                    mLightModeIconColorSingleTone, mDarkModeIconColorSingleTone);
-            mContrastTint = (int) evaluator
-                    .evaluate(darkIntensity, mLightModeContrastColor, mDarkModeContrastColor);
-        }
+        mIconTint = (int) evaluator.evaluate(darkIntensity,
+                mLightModeIconColorSingleTone, mDarkModeIconColorSingleTone);
+        mContrastTint = (int) evaluator
+                .evaluate(darkIntensity, mLightModeContrastColor, mDarkModeContrastColor);
 
         applyIconTint();
     }
@@ -233,12 +179,6 @@ public class DarkIconDispatcherImpl implements SysuiDarkIconDispatcher,
             mReceivers.valueAt(i).onDarkChanged(mTintAreas, mDarkIntensity, mIconTint);
             mReceivers.valueAt(i).onDarkChangedWithContrast(mTintAreas, mIconTint, mContrastTint);
         }
-    }
-
-    @Override
-    public void onThemeChanged() {
-        // Re-apply dark intensity when theme changes to update accent color
-        applyDarkIntensity(mDarkIntensity);
     }
 
     @Override

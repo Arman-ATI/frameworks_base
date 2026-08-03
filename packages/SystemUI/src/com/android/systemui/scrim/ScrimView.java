@@ -22,7 +22,6 @@ import android.annotation.NonNull;
 import android.content.Context;
 import android.content.ContentResolver;
 import android.content.res.Resources;
-import android.database.ContentObserver;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
@@ -33,7 +32,6 @@ import android.graphics.RenderEffect;
 import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
-import android.os.Handler;
 import android.os.Looper;
 import android.os.UserHandle;
 import android.provider.Settings;
@@ -80,10 +78,6 @@ public class ScrimView extends View {
     private Looper mExecutorLooper;
     @Nullable
     private Rect mDrawableBounds;
-
-    private boolean mIsNotificationScrim = false;
-    @Nullable
-    private ContentObserver mSettingsObserver;
 
     public ScrimView(Context context) {
         this(context, null);
@@ -173,7 +167,10 @@ public class ScrimView extends View {
 
     @Override
     public void setVisibility(int visibility) {
-        super.setVisibility(mIsNotificationScrim ? View.GONE : visibility);
+        super.setVisibility
+            (isNotificationScrim() 
+                ? View.GONE 
+                : visibility);
     }
 
     /**
@@ -352,17 +349,7 @@ public class ScrimView extends View {
 
     public void setScrimName(String scrimName) {
         mScrimName = scrimName;
-        registerSettingsObserver();
-        updateNotificationScrimState();
-    }
-
-    @Override
-    protected void onDetachedFromWindow() {
-        super.onDetachedFromWindow();
-        if (mSettingsObserver != null) {
-            getContext().getContentResolver().unregisterContentObserver(mSettingsObserver);
-            mSettingsObserver = null;
-        }
+        setVisibility(getVisibility());
     }
 
     @Override
@@ -415,7 +402,7 @@ public class ScrimView extends View {
      * Blur the view with the specific blur radius or clear any blurs if the radius is 0
      */
     public void setBlurRadius(float blurRadius) {
-        if (mIsNotificationScrim) {
+        if (isNotificationScrim()) {
             setRenderEffect(null);
             return;
         }
@@ -447,30 +434,8 @@ public class ScrimView extends View {
         return singleQsTone || splitShade;
     }
 
-    private void updateNotificationScrimState() {
-        boolean newValue = isSingleQsToneEnabled()
-                && TextUtils.equals(mScrimName, "notifications_scrim");
-        if (newValue == mIsNotificationScrim) return;
-        mIsNotificationScrim = newValue;
-        setVisibility(getVisibility());
-        setBlurRadius(0);
-        invalidate();
-    }
-
-    private void registerSettingsObserver() {
-        if (mSettingsObserver != null) return;
-        mSettingsObserver = new ContentObserver(new Handler(Looper.getMainLooper())) {
-            @Override
-            public void onChange(boolean selfChange) {
-                updateNotificationScrimState();
-            }
-        };
-        ContentResolver resolver = getContext().getContentResolver();
-        resolver.registerContentObserver(
-                Settings.System.getUriFor(Settings.System.SINGLE_QS_TONE_ENABLED),
-                false, mSettingsObserver, UserHandle.USER_CURRENT);
-        resolver.registerContentObserver(
-                Settings.System.getUriFor(Settings.System.QS_SPLIT_SHADE),
-                false, mSettingsObserver, UserHandle.USER_CURRENT);
+    private boolean isNotificationScrim() {
+        return isSingleQsToneEnabled() && TextUtils.equals(
+            mScrimName, "notifications_scrim");
     }
 }

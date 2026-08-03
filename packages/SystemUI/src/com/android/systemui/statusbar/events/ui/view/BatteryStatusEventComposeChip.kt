@@ -164,12 +164,5 @@ private fun BatteryAndPercentChip(
                 style = MaterialTheme.typography.labelLargeEmphasized,
             )
         }
-        if (isText) {
-            Text(
-                text = "\u26A1",
-                color = BatteryColors.DarkTheme.Default.fill,
-                style = MaterialTheme.typography.labelLargeEmphasized,
-            )
-        }
     }
 }

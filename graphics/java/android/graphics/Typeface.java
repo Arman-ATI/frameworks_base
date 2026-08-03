@@ -1620,14 +1620,6 @@ public class Typeface {
         Typeface tfBold = create(base, BOLD);
         Typeface tfItalic = create(base, ITALIC);
         Typeface tfItalicBold = create(base, BOLD_ITALIC);
-
-        nativeForceSetStaticFinalField("DEFAULT", tf);
-        nativeForceSetStaticFinalField("DEFAULT_BOLD", tfBold);
-        nativeForceSetStaticFinalField("SANS_SERIF", tf);
-
-        changeDefaultFontForTest(
-                Arrays.asList(tf, tfBold, tfItalic, tfItalicBold),
-                Arrays.asList(tf, Typeface.SERIF, Typeface.MONOSPACE));
     }
 
     /** @hide */

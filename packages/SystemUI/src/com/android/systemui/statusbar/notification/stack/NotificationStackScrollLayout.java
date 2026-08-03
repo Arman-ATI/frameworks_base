@@ -7718,14 +7718,14 @@ public class NotificationStackScrollLayout
         for (int i = 0; i < childCount; i++) {
             ExpandableView child = getChildAtIndex(i);
             if (child instanceof ExpandableNotificationRow row) {
-                NotificationEntry entry = row.getEntry();
-                if (entry == null) continue;
-                StatusBarNotification sbn = entry.getSbn();
+                StatusBarNotification sbn = row.getEntryAdapter() != null
+                        ? row.getEntryAdapter().getSbn() : null;
+                if (sbn == null) continue;
                 if (packageName != null && !packageName.equals(sbn.getPackageName())) {
                     continue;
                 }
                 row.setHideSensitive(hideSensitive, false, 0, 0);
-                onChildHeightChanged(child, true);
+                onChildHeightChanged(child, true, "applocker-update");
             }
         }
         updateContentHeight();

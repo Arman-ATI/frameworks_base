@@ -25,7 +25,7 @@ import android.service.quicksettings.Tile;
 import androidx.annotation.Nullable;
 
 import com.android.systemui.animation.Expandable;
-import com.android.systemui.android.onthego.OnTheGoService;
+import com.android.systemui.crdroid.onthego.OnTheGoService;
 import com.android.systemui.dagger.qualifiers.Background;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.plugins.ActivityStarter;

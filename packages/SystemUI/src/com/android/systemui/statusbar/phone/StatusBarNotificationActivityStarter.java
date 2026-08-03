@@ -90,7 +90,6 @@ import com.android.systemui.statusbar.notification.headsup.HeadsUpUtil;
 import com.android.systemui.statusbar.notification.row.ExpandableNotificationRow;
 import com.android.systemui.statusbar.notification.row.ExpandableNotificationRowDragController;
 import com.android.systemui.statusbar.notification.row.OnUserInteractionCallback;
-import com.android.systemui.statusbar.notification.shared.NotificationBundleUi;
 import com.android.systemui.statusbar.policy.KeyguardStateController;
 import com.android.systemui.wmshell.BubblesManager;
 import com.android.wm.shell.shared.bubbles.logging.BubbleLog;
@@ -318,11 +317,7 @@ public class StatusBarNotificationActivityStarter implements NotificationActivit
     private void openLockedShadeForAppLockedNotification(
             NotificationEntry entry,
             ExpandableNotificationRow row) {
-        if (NotificationBundleUi.isEnabled()) {
             mPresenter.onExpandClicked(row, row.getEntryAdapter(), true);
-        } else {
-            mPresenter.onExpandClicked(entry, row, true);
-        }
     }
 
     private void performActionAfterKeyguardDismissed(NotificationEntry entry,

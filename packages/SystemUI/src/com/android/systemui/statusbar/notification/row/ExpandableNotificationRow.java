@@ -21,7 +21,6 @@ import static android.view.accessibility.AccessibilityEvent.CONTENT_CHANGE_TYPE_
 import static android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED;
 
 import static android.app.Flags.enableAutomationNotificationUi;
-import static com.android.systemui.flags.Flags.ENABLE_NOTIFICATIONS_SIMULATE_SLOW_MEASURE;
 import static com.android.systemui.statusbar.NotificationLockscreenUserManager.REDACTION_TYPE_NONE;
 import static com.android.systemui.statusbar.notification.NotificationUtils.logKey;
 import static com.android.systemui.statusbar.notification.row.NotificationContentView.VISIBLE_TYPE_HEADSUP;
@@ -459,9 +458,7 @@ public class ExpandableNotificationRow extends ActivatableNotificationView
     }
 
     private StatusBarNotification getAppLockSbn() {
-        if (NotificationBundleUi.isEnabled()) {
-            return mEntryAdapter != null ? mEntryAdapter.getSbn() : null;
-        }
+        return mEntryAdapter != null ? mEntryAdapter.getSbn() : null;
         return mEntry != null ? mEntry.getSbn() : null;
     }
 

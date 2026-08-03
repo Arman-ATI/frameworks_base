@@ -44,11 +44,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.android.compose.PlatformButton
+import com.android.compose.dialog.AlertDialogContent
 import com.android.compose.theme.PlatformTheme
 import com.android.systemui.smartpixel.domain.SmartPixelSettings
 import com.android.systemui.smartpixel.domain.SmartPixelSettings.Companion.MAX_PERCENT
 import com.android.systemui.smartpixel.domain.SmartPixelSettings.Companion.MIN_PERCENT
-import com.android.systemui.dialog.ui.composable.AlertDialogContent
 import com.android.systemui.res.R
 import com.android.systemui.shade.domain.interactor.ShadeDialogContextInteractor
 import com.android.systemui.statusbar.phone.SystemUIDialog

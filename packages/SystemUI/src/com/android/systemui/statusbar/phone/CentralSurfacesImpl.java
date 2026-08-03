@@ -1133,7 +1133,6 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces,
         ShadeExpansionChangeEvent currentState =
                 mShadeExpansionStateManager.addExpansionListener(mWakeUpCoordinator);
         mWakeUpCoordinator.onPanelExpansionChanged(currentState);
-        mBurnInProtectionController.setPhoneStatusBarView(mPhoneStatusBarViewController.getPhoneStatusBarView());
 
         mShadeTouchableRegionManager.setup(getNotificationShadeWindowView());
 
@@ -2362,7 +2361,6 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces,
         mKeyguardBypassController.setBouncerShowing(bouncerShowing);
         mPulseExpansionHandler.setBouncerShowing(bouncerShowing);
         setBouncerShowingForStatusBarComponents(bouncerShowing);
-        mPhoneStatusBarViewController.setBrightnessControlEnabled(mBrightnessControl);
         mStatusBarHideIconsForBouncerManager.setBouncerShowingAndTriggerUpdate(bouncerShowing);
         mCommandQueue.recomputeDisableFlags(mDisplayId, true /* animate */);
         if (mBouncerShowing) {
@@ -2764,8 +2762,6 @@ public class CentralSurfacesImpl implements CoreStartable, CentralSurfaces,
             case STATUS_BAR_BRIGHTNESS_CONTROL:
                 mBrightnessControl =
                         TunerService.parseIntegerSwitch(newValue, false);
-                if (mPhoneStatusBarViewController != null)
-                    mPhoneStatusBarViewController.setBrightnessControlEnabled(mBrightnessControl);
                 break;
             default:
                 break;

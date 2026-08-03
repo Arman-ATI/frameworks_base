@@ -275,43 +275,17 @@ fun SystemUIDialogFactory.createBottomSheet(
                                     WindowInsets.safeDrawing.getBottom(this).toDp()
                                 }
                         )
-                Surface(
-                    modifier = surfaceModifier,
-                    shape = shape,
-                    color =
-                        if (useAxBlur) {
-                            Color.Transparent
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainer
-                        },
-                ) {
-                    Box {
-                        if (useAxBlur) {
-                            AxBlurSurface(
-                                modifier = Modifier.matchParentSize(),
-                                shape = shape,
-                                cornerRadius = radius,
-                            )
-                        }
-                        Box(
-                            Modifier.padding(
-                                bottom =
-                                    with(LocalDensity.current) {
-                                        WindowInsets.safeDrawing.getBottom(this).toDp()
-                                    }
-                            )
-                        ) {
-                            if (isDraggable) {
-                                Column(
-                                    Modifier.wrapContentWidth(Alignment.CenterHorizontally),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                ) {
-                                    DragHandle(dialog)
-                                    content(dialog)
-                                }
-                            } else {
+                    ) {
+                        if (isDraggable) {
+                            Column(
+                                Modifier.wrapContentWidth(Alignment.CenterHorizontally),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                DragHandle(dialog)
                                 content(dialog)
                             }
+                        } else {
+                            content(dialog)
                         }
                     }
                 }

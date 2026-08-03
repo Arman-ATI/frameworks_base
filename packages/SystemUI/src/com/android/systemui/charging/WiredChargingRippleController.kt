@@ -79,9 +79,9 @@ constructor(
     private val uiEventLogger: UiEventLogger,
 ) {
     private var pluggedIn: Boolean = false
+    private var batteryLevel: Int = 0
     private val rippleEnabled: Boolean =
         featureFlags.isEnabled(Flags.CHARGING_RIPPLE) &&
-    private var batteryLevel: Int = 0
             !SystemProperties.getBoolean("persist.debug.suppress-charging-ripple", false)
     private var normalizedPortPosX: Float =
         context.resources.getFloat(R.dimen.physical_charger_port_location_normalized_x)

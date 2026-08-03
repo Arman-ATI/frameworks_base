@@ -7,6 +7,7 @@ import com.android.internal.R as InternalR
 import com.android.systemui.common.shared.model.Icon as SysUISharedIcon
 import com.android.systemui.common.ui.compose.Icon as SysUIIcon
 import com.android.systemui.statusbar.chips.ui.model.OngoingActivityChipModel
+import com.android.systemui.statusbar.chips.ui.model.Chronometer
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -251,16 +252,10 @@ private fun AospChipPillIcon(
                     modifier = Modifier.size(SizeBadge),
                 )
             }
-            is OngoingActivityChipModel.ChipIcon.StatusBarView -> {
-                val drawable = renderIcon.impl.drawable
-                if (drawable != null) {
-                    Image(
-                        bitmap = drawable.toScaledBitmap(SizeBadge),
-                        contentDescription = null,
-                        modifier = Modifier.size(SizeBadge),
-                    )
-                }
-            }
+            // NOTE: ChipIcon.StatusBarView branch removed - no such subtype exists on
+            // OngoingActivityChipModel.ChipIcon (only SingleColorIcon and
+            // StatusBarNotificationIcon do). If this variant is meant to exist, it needs to be
+            // added back to OngoingActivityChipModel.kt first.
             is OngoingActivityChipModel.ChipIcon.StatusBarNotificationIcon -> {
                 val drawable = remember(event.active.managingPackageName) {
                     event.active.managingPackageName?.let { pkg ->
@@ -1243,29 +1238,49 @@ private fun AospChipText(event: IslandEvent.AospChip, modifier: Modifier, overri
                 modifier = modifier,
             )
         is OngoingActivityChipModel.Content.IconOnly -> {}
+        is OngoingActivityChipModel.Content.TextVariants -> {
+            // TODO: pick the first variant that fits available space per the type's contract;
+            //  showing the first variant for now since a fits-measurement API isn't available here.
+            c.textVariants.firstOrNull()?.let { text ->
+                if (text.isNotBlank()) MarqueeLabel(text, color, modifier)
+            }
+        }
     }
 }
 
 @Composable
 private fun AospChipTimerText(content: OngoingActivityChipModel.Content.Timer, color: Color, modifier: Modifier) {
-    var elapsedMs by remember(content.startTimeMs, content.isEventInFuture, content.timeSource) {
+    var elapsedMs by remember(content.value, content.timeSource) {
         mutableLongStateOf(aospTimerElapsedMs(content))
     }
-    LaunchedEffect(content.startTimeMs, content.isEventInFuture, content.timeSource) {
+    LaunchedEffect(content.value, content.timeSource) {
         while (true) {
             elapsedMs = aospTimerElapsedMs(content)
-            delay(1000L - abs(content.startTimeMs - content.timeSource.getCurrentTime()) % 1000L)
+            when (val chronometer = content.value) {
+                is Chronometer.Paused -> break
+                is Chronometer.Running -> {
+                    val zeroMs = chronometer.eventTime.asElapsedRealtime(content.timeSource)
+                    val nowMs = content.timeSource.elapsedRealtime()
+                    delay(1000L - abs(nowMs - zeroMs) % 1000L)
+                }
+            }
         }
     }
     Text(formatCountdownLong(elapsedMs), color = color, style = PillMono, modifier = modifier)
 }
 
 private fun aospTimerElapsedMs(content: OngoingActivityChipModel.Content.Timer): Long {
-    val now = content.timeSource.getCurrentTime()
-    return if (content.isEventInFuture) {
-        (content.startTimeMs - now).coerceAtLeast(0L)
-    } else {
-        (now - content.startTimeMs).coerceAtLeast(0L)
+    return when (val chronometer = content.value) {
+        is Chronometer.Paused -> chronometer.atDuration.toMillis().coerceAtLeast(0L)
+        is Chronometer.Running -> {
+            val zeroMs = chronometer.eventTime.asElapsedRealtime(content.timeSource)
+            val nowMs = content.timeSource.elapsedRealtime()
+            if (chronometer.isCountdown) {
+                (zeroMs - nowMs).coerceAtLeast(0L)
+            } else {
+                (nowMs - zeroMs).coerceAtLeast(0L)
+            }
+        }
     }
 }
 

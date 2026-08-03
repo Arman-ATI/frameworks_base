@@ -84,11 +84,6 @@ interface HomeStatusBarViewBinder {
 
 @PerDisplaySingleton
 class HomeStatusBarViewBinderImpl @Inject constructor() : HomeStatusBarViewBinder {
-    private companion object {
-        const val CHIP_STYLE_CUSTOM_GRADIENT = 13
-        const val GRADIENT_TEXT_STYLE_MASK = 1
-    }
-
     private data class ClockState(
         val autoHide: Boolean,
         val denyListed: Boolean,
@@ -791,6 +786,9 @@ class HomeStatusBarViewBinderImpl @Inject constructor() : HomeStatusBarViewBinde
     }
 
     companion object {
+        private const val CHIP_STYLE_CUSTOM_GRADIENT = 13
+        private const val GRADIENT_TEXT_STYLE_MASK = 1
+
         private const val CLOCK_POSITION_RIGHT = 0
         private const val CLOCK_POSITION_CENTER = 1
         private const val CLOCK_POSITION_LEFT = 2

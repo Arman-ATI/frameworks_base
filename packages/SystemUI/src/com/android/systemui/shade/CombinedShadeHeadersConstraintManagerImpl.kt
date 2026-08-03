@@ -28,6 +28,7 @@ object CombinedShadeHeadersConstraintManagerImpl : CombinedShadeHeadersConstrain
 
     override fun privacyChipVisibilityConstraints(chipVisible: Boolean): ConstraintsChanges {
         val headerIconsVisibility = if (chipVisible) View.INVISIBLE else View.VISIBLE
+        val constraintAlpha = if (chipVisible) 0f else 1f
         return ConstraintsChanges(
             qqsConstraintsChanges = {
                 setVisibility(R.id.shade_header_system_icons, headerIconsVisibility)

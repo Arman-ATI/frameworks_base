@@ -131,15 +131,6 @@ constructor(
     private val weatherPlugin: BcSmartspaceDataPlugin? = optionalWeatherPlugin.orElse(null)
     private val plugin: BcSmartspaceDataPlugin? = optionalPlugin.orElse(null)
     private val configPlugin: BcSmartspaceConfigPlugin? = optionalConfigPlugin.orElse(null)
-    private val smartspaceConfigPlugin =
-        object : BcSmartspaceConfigPlugin {
-            override val isDefaultDateWeatherDisabled: Boolean
-                get() = isDateWeatherDecoupled || (configPlugin?.isDefaultDateWeatherDisabled ?: false)
-            override val isViewPager2Enabled: Boolean
-                get() = configPlugin?.isViewPager2Enabled ?: false
-            override val isSwipeEventLoggingEnabled: Boolean
-                get() = configPlugin?.isSwipeEventLoggingEnabled ?: false
-        }
 
     // This stores recently received Smartspace pushes to be included in dumpsys.
     private val recentSmartspaceData: Deque<List<SmartspaceTarget>> = LinkedList()
@@ -421,7 +412,7 @@ constructor(
                 surfaceName = SmartspaceViewModel.SURFACE_GENERAL_VIEW,
                 context = context,
                 plugin = plugin,
-                configPlugin = smartspaceConfigPlugin,
+                configPlugin = configPlugin,
                 isLargeClock = false,
             )
         connectSession()

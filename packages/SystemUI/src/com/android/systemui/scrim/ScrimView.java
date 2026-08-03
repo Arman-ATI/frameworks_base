@@ -32,9 +32,6 @@ import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Looper;
-import android.os.UserHandle;
-import android.provider.Settings;
-import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -162,14 +159,6 @@ public class ScrimView extends View {
         executeOnExecutor(() -> {
             super.setClickable(clickable);
         });
-    }
-
-    @Override
-    public void setVisibility(int visibility) {
-        super.setVisibility
-            (isNotificationScrim() 
-                ? View.GONE 
-                : visibility);
     }
 
     /**
@@ -348,7 +337,6 @@ public class ScrimView extends View {
 
     public void setScrimName(String scrimName) {
         mScrimName = scrimName;
-        setVisibility(getVisibility());
     }
 
     @Override
@@ -401,10 +389,6 @@ public class ScrimView extends View {
      * Blur the view with the specific blur radius or clear any blurs if the radius is 0
      */
     public void setBlurRadius(float blurRadius) {
-        if (isNotificationScrim()) {
-            setRenderEffect(null);
-            return;
-        }
         if (blurRadius > 0) {
             debugLog("Apply blur RenderEffect to ScrimView " + mScrimName + " for radius "
                     + blurRadius);
@@ -422,15 +406,5 @@ public class ScrimView extends View {
         if (isDebugLoggable) {
             Log.d(TAG, logMsg);
         }
-    }
-
-    private boolean isSingleQsToneEnabled() {
-        return Settings.System.getIntForUser(getContext().getContentResolver(),
-            Settings.System.SINGLE_QS_TONE_ENABLED, 0, UserHandle.USER_CURRENT) == 1;
-    }
-
-    private boolean isNotificationScrim() {
-        return isSingleQsToneEnabled() && TextUtils.equals(
-            mScrimName, "notifications_scrim");
     }
 }

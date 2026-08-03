@@ -4607,12 +4607,12 @@ public class NotificationStackScrollLayout
 
     protected boolean isInsideQsHeader(MotionEvent ev) {
         SceneContainerFlag.assertInLegacyMode();
-        if (mQSHeaderBoundsProvider == null) {
-            return false;
         AxAmbientStateEx axAmbientStateEx = Dependency.get(AxAmbientStateEx.class);
         if (axAmbientStateEx.getSplitShadeEnabled()) {
             return false;
         }
+        if (mQSHeaderBoundsProvider == null) {
+            return false;
         } else {
             mQSHeaderBoundsProvider.getBoundsOnScreenProvider().invoke(mQsHeaderBound);
         }

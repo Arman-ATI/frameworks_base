@@ -199,9 +199,7 @@ public class NotificationTemplateViewWrapper extends NotificationHeaderViewWrapp
         if (mProgressBar == null) {
             return;
         }
-        StatusBarNotification sbn = NotificationBundleUi.isEnabled()
-                ? mRow.getEntryAdapter().getSbn()
-                : mRow.getEntryLegacy().getSbn();
+        StatusBarNotification sbn = mRow.getEntryAdapter().getSbn();
         if (sbn != null && sbn.getNotification().extras.getBoolean(
                 Notification.EXTRA_PROGRESS_INDETERMINATE, false)) {
             mProgressBar.setIndeterminate(running);

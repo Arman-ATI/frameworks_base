@@ -459,7 +459,6 @@ public class ExpandableNotificationRow extends ActivatableNotificationView
 
     private StatusBarNotification getAppLockSbn() {
         return mEntryAdapter != null ? mEntryAdapter.getSbn() : null;
-        return mEntry != null ? mEntry.getSbn() : null;
     }
 
     private boolean isNotificationAppLocked() {
@@ -3477,7 +3476,7 @@ public class ExpandableNotificationRow extends ActivatableNotificationView
                 mPublicLayout.setVisibility(mShowingPublic ? View.VISIBLE : View.INVISIBLE);
                 updateChildrenVisibility();
             }
-            notifyHeightChanged(true);
+            notifyHeightChanged(true, "ENR.updateAppLockedShowingState");
         }
     }
 

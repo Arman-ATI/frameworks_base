@@ -20,7 +20,6 @@ import static java.lang.Float.isNaN;
 
 import android.annotation.NonNull;
 import android.content.Context;
-import android.content.ContentResolver;
 import android.content.res.Resources;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -426,12 +425,8 @@ public class ScrimView extends View {
     }
 
     private boolean isSingleQsToneEnabled() {
-        ContentResolver resolver = getContext().getContentResolver();
-        boolean singleQsTone = Settings.System.getIntForUser(resolver,
+        return Settings.System.getIntForUser(getContext().getContentResolver(),
             Settings.System.SINGLE_QS_TONE_ENABLED, 0, UserHandle.USER_CURRENT) == 1;
-        boolean splitShade = Settings.System.getIntForUser(resolver,
-            Settings.System.QS_SPLIT_SHADE, 0, UserHandle.USER_CURRENT) == 1;
-        return singleQsTone || splitShade;
     }
 
     private boolean isNotificationScrim() {

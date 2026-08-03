@@ -116,11 +116,9 @@ sealed class BatteryViewModel(
             interactor.batteryAttributionType,
             interactor.isCritical,
             interactor.tintStatusBarIconsWithAccent,
-            interactor.themeChanged,
-            interactor.showPercentInsideIcon,
-        ) { attr, isCritical, useAccentColor, _, percentInsideIcon ->
-            val result: ColorProfile
-            val baseProfile: ColorProfile = when (attr) {
+            interactor.themeChanged
+        ) { attr, isCritical, useAccentColor, _ ->
+            val baseProfile = when (attr) {
                 Charging,
                 Defend ->
                     ColorProfile(
@@ -148,21 +146,13 @@ sealed class BatteryViewModel(
                     }
             }
             
-            result = if (useAccentColor) {
+            if (useAccentColor) {
                 val accentColorInt = Utils.getColorAccentDefaultColor(context)
-                if (percentInsideIcon) {
-                    val (accentLight, accentDark) =
-                        BatteryColors.createAccentInsideIconThemes(accentColorInt)
-                    ColorProfile(dark = accentDark, light = accentLight)
-                } else {
-                    val (accentLight, accentDark) =
-                        BatteryColors.createAccentThemes(accentColorInt)
-                    ColorProfile(dark = accentDark, light = accentLight)
-                }
+                val (accentLight, accentDark) = BatteryColors.createAccentThemes(accentColorInt)
+                ColorProfile(dark = accentDark, light = accentLight)
             } else {
                 baseProfile
             }
-            result
         }
 
     /** For the current battery state, what is the relevant color profile to use */

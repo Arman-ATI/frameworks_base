@@ -16,11 +16,6 @@ import androidx.dynamicanimation.animation.SpringForce
 import com.android.internal.util.LatencyTracker
 import com.android.settingslib.Utils
 import com.android.systemui.navigationbar.gestural.BackPanelController.DelayedOnAnimationEndListener
-import android.provider.Settings
-import android.database.ContentObserver
-import android.net.Uri
-import android.os.Handler
-import android.os.Looper
 
 import com.android.systemui.res.R
 
@@ -51,13 +46,8 @@ class BackPanel(context: Context, private val latencyTracker: LatencyTracker) : 
     // True if the panel is currently on the left of the screen
     var isLeftPanel = false
 
-    var edgePanelParams: EdgePanelParams? = null
-
     /** Used to track back arrow latency from [android.view.MotionEvent.ACTION_DOWN] to [onDraw] */
     private var trackingBackArrowLatency = false
-
-    private var showBackgroundEnabled = false
-    private val settingsObserver: ContentObserver
 
     /** The length of the arrow measured horizontally. Used for animating [arrowPath] */
     private var arrowLength =
@@ -324,30 +314,6 @@ class BackPanel(context: Context, private val latencyTracker: LatencyTracker) : 
             strokeJoin = Paint.Join.ROUND
             strokeCap = Paint.Cap.ROUND
         }
-
-        settingsObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
-            override fun onChange(selfChange: Boolean, uri: Uri?) {
-                updateBackgroundVisibilitySetting()
-            }
-        }
-
-        context.contentResolver.registerContentObserver(
-            Settings.Secure.getUriFor(Settings.Secure.SHOW_BACK_GESTURE_BACKGROUND),
-            false,
-            settingsObserver
-        )
-
-        updateBackgroundVisibilitySetting()
-    }
-
-    private fun updateBackgroundVisibilitySetting() {
-        showBackgroundEnabled = Settings.Secure.getInt(
-            context.contentResolver,
-            Settings.Secure.SHOW_BACK_GESTURE_BACKGROUND,
-            0
-        ) == 1
-        edgePanelParams?.setArrowSizeScale(showBackgroundEnabled)
-        invalidate()
     }
 
     private fun calculateArrowPath(dx: Float, dy: Float): Path {
@@ -546,16 +512,9 @@ class BackPanel(context: Context, private val latencyTracker: LatencyTracker) : 
                     topRight = farCorner,
                     bottomRight = farCorner,
                 )
-        
-        val finalBackgroundAlpha = if (showBackgroundEnabled) {
-            (255 * 0.8f * backgroundAlpha.pos).toInt()
-        } else {
-            0
-        }
-        
         canvas.drawPath(
             arrowBackground,
-            arrowBackgroundPaint.apply { alpha = finalBackgroundAlpha }
+            arrowBackgroundPaint.apply { alpha = 0 }
         )
 
         val dx = arrowLength.pos
@@ -698,10 +657,5 @@ class BackPanel(context: Context, private val latencyTracker: LatencyTracker) : 
     
     fun getIsLeftPanel(): Boolean {
         return isLeftPanel
-    }
-
-    override fun onDetachedFromWindow() {
-        super.onDetachedFromWindow()
-        context.contentResolver.unregisterContentObserver(settingsObserver)
     }
 }

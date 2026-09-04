@@ -34,6 +34,7 @@ import com.android.systemui.statusbar.quickactions.shared.model.QuickActionChipM
 import com.android.systemui.statusbar.quickactions.ui.compose.ChipColors
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
@@ -47,26 +48,36 @@ constructor(
     private val flashlightController: FlashlightController,
 ) : StatusBarPopupChipViewModel, HydratedActivatable() {
 
+    private var callbackScope: ProducerScope<FlashlightState>? = null
+
+    private val flashlightListener =
+        object : FlashlightController.FlashlightListener {
+            override fun onFlashlightChanged(enabled: Boolean) {
+                callbackScope?.trySend(readFlashlightState(enabled = enabled))
+            }
+
+            override fun onFlashlightError() {
+                callbackScope?.trySend(readFlashlightState())
+            }
+
+            override fun onFlashlightAvailabilityChanged(available: Boolean) {
+                callbackScope?.trySend(readFlashlightState())
+            }
+
+            override fun onFlashlightStrengthChanged(level: Int) {
+                callbackScope?.trySend(readFlashlightState())
+            }
+        }
+
     override val chip: QuickActionChipModel by
         callbackFlow {
-                val callback =
-                    object : FlashlightController.FlashlightListener {
-                        override fun onFlashlightChanged(enabled: Boolean) {
-                            trySend(readFlashlightState())
-                        }
-
-                        override fun onFlashlightError() {
-                            trySend(readFlashlightState())
-                        }
-
-                        override fun onFlashlightAvailabilityChanged(available: Boolean) {
-                            trySend(readFlashlightState())
-                        }
-                    }
-
-                flashlightController.addCallback(callback)
+                callbackScope = this
+                flashlightController.addCallback(flashlightListener)
                 trySend(readFlashlightState())
-                awaitClose { flashlightController.removeCallback(callback) }
+                awaitClose {
+                    flashlightController.removeCallback(flashlightListener)
+                    callbackScope = null
+                }
             }
             .map(::toPopupChipModel)
             .combine(
@@ -115,11 +126,11 @@ constructor(
         )
     }
 
-    private fun readFlashlightState(): FlashlightState {
+    private fun readFlashlightState(enabled: Boolean? = null): FlashlightState {
         return FlashlightState(
             hasFlashlight = flashlightController.hasFlashlight(),
             isAvailable = flashlightController.isAvailable(),
-            isEnabled = flashlightController.isEnabled(),
+            isEnabled = enabled ?: flashlightController.isEnabled(),
         )
     }
 

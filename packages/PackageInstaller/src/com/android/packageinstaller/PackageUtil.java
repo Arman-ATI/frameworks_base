@@ -413,11 +413,17 @@ public class PackageUtil {
     /**
      * Returns if the version two is enabled.
      * 1. Currently, the version two is only enabled for the mobile devices
+     * 2. Enabled by the expressive UI configuration, even on an OS version older than the default
      */
     public static boolean isVersionTwoEnabled(@NonNull Context context) {
         if (isAuto(context) || isTV(context) || isWatch(context)) {
             Log.d(LOG_TAG, "The device doesn't support PIA version 2");
             return false;
+        }
+
+        if (context.getResources().getBoolean(R.bool.config_useExpressivePackageInstaller)) {
+            Log.d(LOG_TAG, "Use PIA V2 (expressive UI config)");
+            return true;
         }
 
         // Only enable PIA V2 on the version that is newer than BAKLAVA

@@ -146,6 +146,8 @@ class InstallRepository(private val context: Context) : EventResultPersister.Eve
      * PackageInfo of the app being installed on device.
      */
     private var newPackageInfo: PackageInfo? = null
+    var appDetails: InstallAppDetails? = null
+        private set
     private var wasUserConfirmationTriggeredByPia = false
 
     /**
@@ -765,6 +767,12 @@ class InstallRepository(private val context: Context) : EventResultPersister.Eve
                 return InstallAborted(ABORT_REASON_INTERNAL_ERROR)
             }
         }
+        appDetails = newPackageInfo?.let {
+            InstallAppDetails.fromPackageInfo(
+                it,
+                packageUri.path?.takeIf { scheme == ContentResolver.SCHEME_FILE }?.let(::File),
+            )
+        }
         isAppUpdating = isAppUpdating(newPackageInfo)
         val (existingUpdateOwner, requestedUpdateOwner) =
             getUpdateOwners(newPackageInfo, userActionReason, isAppUpdating)
@@ -781,6 +789,15 @@ class InstallRepository(private val context: Context) : EventResultPersister.Eve
      */
     private fun processSessionInfo(sessionInfo: SessionInfo, userActionReason: Int): InstallStage {
         newPackageInfo = generateStubPackageInfo(sessionInfo.getAppPackageName())
+        val displayInfo = sessionInfo.resolvedBaseApkPath?.let {
+            getPackageInfo(context, File(it), 0)
+        }
+        appDetails = displayInfo?.let {
+            InstallAppDetails.fromPackageInfo(it, sessionInfo.resolvedBaseApkPath?.let(::File))
+        }
+            ?: sessionInfo.appPackageName?.let {
+                InstallAppDetails(it, sizeBytes = sessionInfo.size.takeIf { size -> size > 0 })
+            }
         appSnippet = getAppSnippet(context, sessionInfo)
         isAppUpdating = isAppUpdating(newPackageInfo)
         val (existingUpdateOwner, requestedUpdateOwner) =

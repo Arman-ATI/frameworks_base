@@ -44,10 +44,9 @@ import com.android.packageinstaller.v2.model.InstallRepository
 import com.android.packageinstaller.v2.model.InstallStage
 import com.android.packageinstaller.v2.model.InstallSuccess
 import com.android.packageinstaller.v2.model.InstallUserActionRequired
-import com.android.packageinstaller.v2.model.PackageUtil
 import com.android.packageinstaller.v2.model.PackageUtil.localLogv
-import com.android.packageinstaller.v2.ui.fragments.InstallRestrictionFragment
-import com.android.packageinstaller.v2.ui.fragments.InstallationFragment
+import com.android.packageinstaller.v2.ui.compose.ExpressiveInstallRestrictionFragment
+import com.android.packageinstaller.v2.ui.compose.ExpressiveInstallationFragment
 import com.android.packageinstaller.v2.viewmodel.InstallViewModel
 import com.android.packageinstaller.v2.viewmodel.InstallViewModelFactory
 
@@ -81,13 +80,6 @@ class InstallLaunch : FragmentActivity(), InstallActionListener {
         super.onCreate(savedInstanceState)
         window.addSystemFlags(WindowManager.LayoutParams.SYSTEM_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS)
         requestWindowFeature(Window.FEATURE_NO_TITLE)
-
-        // The base theme inherits a deviceDefault theme. Applying a material style on the base
-        // theme to support the material design.
-        if (PackageUtil.isMaterialDesignEnabled(this)) {
-            Log.d(LOG_TAG, "Apply material design")
-            theme.applyStyle(R.style.Theme_AlertDialogActivity_Material, /* force= */ true)
-        }
 
         fragmentManager = supportFragmentManager
         appOpsManager = getSystemService(AppOpsManager::class.java)
@@ -241,12 +233,12 @@ class InstallLaunch : FragmentActivity(), InstallActionListener {
         }
         return when (restriction) {
             UserManager.DISALLOW_INSTALL_APPS ->
-                InstallRestrictionFragment.newInstance(
+                ExpressiveInstallRestrictionFragment.newInstance(
                     R.string.message_no_install_apps_restriction)
 
             UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES,
             UserManager.DISALLOW_INSTALL_UNKNOWN_SOURCES_GLOBALLY ->
-                InstallRestrictionFragment.newInstance(
+                ExpressiveInstallRestrictionFragment.newInstance(
                     R.string.message_no_install_unknown_apps_restriction)
 
             else -> null
@@ -255,7 +247,7 @@ class InstallLaunch : FragmentActivity(), InstallActionListener {
 
     @RequiresApi(Build.VERSION_CODES_FULL.BAKLAVA_1)
     private fun showInstallationDialog() {
-        val fragment = getInstallationFragment() ?: InstallationFragment()
+        val fragment = getInstallationFragment() ?: ExpressiveInstallationFragment()
         fragment.updateUI()
         showDialogInner(fragment, TAG_INSTALLATION_DIALOG)
     }
@@ -288,9 +280,9 @@ class InstallLaunch : FragmentActivity(), InstallActionListener {
         newDialog?.show(fragmentManager!!, tag)
     }
 
-    private fun getInstallationFragment(): InstallationFragment? {
+    private fun getInstallationFragment(): ExpressiveInstallationFragment? {
         return (fragmentManager!!.findFragmentByTag(TAG_INSTALLATION_DIALOG)
-            ?: return null) as InstallationFragment?
+            ?: return null) as ExpressiveInstallationFragment?
     }
 
     fun setResult(resultCode: Int, data: Intent?, shouldFinish: Boolean) {

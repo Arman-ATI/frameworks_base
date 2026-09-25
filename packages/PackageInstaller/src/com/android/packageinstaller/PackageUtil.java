@@ -42,6 +42,7 @@ import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.os.UserHandle;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
@@ -50,6 +51,8 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
+
+import com.android.packageinstaller.v2.ui.InstallerStyle;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -413,17 +416,12 @@ public class PackageUtil {
     /**
      * Returns if the version two is enabled.
      * 1. Currently, the version two is only enabled for the mobile devices
-     * 2. Enabled by the expressive UI configuration, even on an OS version older than the default
+     * 2. Enabled by the selected installer UI style or the test override
      */
     public static boolean isVersionTwoEnabled(@NonNull Context context) {
         if (isAuto(context) || isTV(context) || isWatch(context)) {
             Log.d(LOG_TAG, "The device doesn't support PIA version 2");
             return false;
-        }
-
-        if (context.getResources().getBoolean(R.bool.config_useExpressivePackageInstaller)) {
-            Log.d(LOG_TAG, "Use PIA V2 (expressive UI config)");
-            return true;
         }
 
         // Only enable PIA V2 on the version that is newer than BAKLAVA
@@ -432,8 +430,16 @@ public class PackageUtil {
             return false;
         }
 
-        Log.d(LOG_TAG, "Use PIA V2");
-        return true;
+        boolean testOverrideForPiaV2 = Settings.System.getInt(context.getContentResolver(),
+                "use_pia_v2", 0) == 1;
+        InstallerStyle style = InstallerStyle.get(context);
+        if (testOverrideForPiaV2 || style != InstallerStyle.AOSP) {
+            Log.d(LOG_TAG, getDebugStringForPiaV2(style, testOverrideForPiaV2));
+            return true;
+        }
+
+        Log.d(LOG_TAG, "Use PIA V1");
+        return false;
     }
 
     private static boolean hasSystemFeature(@NonNull Context context, @NonNull String featureName) {
@@ -456,16 +462,16 @@ public class PackageUtil {
     /**
      * Returns a string containing the reason for using Pia V2. Used for debugging purposes
      */
-    private static String getDebugStringForPiaV2(boolean usePiaV2aConfig,
+    private static String getDebugStringForPiaV2(InstallerStyle style,
             boolean testOverrideForPiaV2) {
         StringBuilder sb = new StringBuilder("Using Pia V2 due to: ");
-        boolean aconfigUsed = false;
-        if (usePiaV2aConfig) {
-            sb.append("aconfig flag USE_PIA_V2");
-            aconfigUsed = true;
+        boolean styleUsed = false;
+        if (style != InstallerStyle.AOSP) {
+            sb.append("installer style ").append(style);
+            styleUsed = true;
         }
         if (testOverrideForPiaV2) {
-            if (aconfigUsed) {
+            if (styleUsed) {
                 sb.append(" and ");
             }
             sb.append("testOverrideForPiaV2.");

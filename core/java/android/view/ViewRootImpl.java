@@ -8817,8 +8817,9 @@ public final class ViewRootImpl implements ViewParent,
             // If the event was fully handled by the handwriting initiator, then don't dispatch it
             // to the view tree.
             handled = handled || mView.dispatchPointerEvent(event);
-            if (mLiquidTabBars != null && event.isFromSource(InputDevice.SOURCE_TOUCHSCREEN)) {
-                mLiquidTabBars.onTouch(event);
+            if (mLiquidTabBars != null && event.isFromSource(InputDevice.SOURCE_TOUCHSCREEN)
+                    && mLiquidTabBars.onTouch(event)) {
+                event.setAction(MotionEvent.ACTION_CANCEL);
             }
             maybeUpdatePointerIcon(event);
             maybeUpdateTooltip(event);

@@ -13717,6 +13717,11 @@ public final class ViewRootImpl implements ViewParent,
     }
 
     @Override
+    public void onContentDrawn() {
+        mBlurRegionAggregator.onFrameDraw();
+    }
+
+    @Override
     public void onDescendantUnbufferedRequested() {
         mUnbufferedInputSource = mView.mUnbufferedInputSource;
     }

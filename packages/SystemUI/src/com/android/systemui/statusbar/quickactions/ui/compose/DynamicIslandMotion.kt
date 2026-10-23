@@ -18,7 +18,17 @@ package com.android.systemui.statusbar.quickactions.ui.compose
 
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.SpringSpec
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.spring
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
 import kotlin.math.PI
 
 /**
@@ -47,4 +57,65 @@ internal object DynamicIslandMotion {
     val CloseHeight = springFor(0.34f, 0.90f)
     val ClosePosition = springFor(0.40f, 0.90f)
     val PillShrink = springFor(0.34f, 0.86f, threshold = 0.0005f)
+    val OpenPositionPx = springFor(0.46f, 0.74f, threshold = 0.4f)
+    val ClosePositionPx = springFor(0.40f, 0.90f, threshold = 0.4f)
+    val OpenWidthPx = springFor(0.40f, 0.76f, threshold = 0.4f)
+    val OpenHeightPx = springFor(0.48f, 0.78f, threshold = 0.4f)
+    val CloseWidthPx = springFor(0.30f, 0.92f, threshold = 0.4f)
+    val CloseHeightPx = springFor(0.34f, 0.90f, threshold = 0.4f)
+    val PillShrinkPx = springFor(0.34f, 0.86f, threshold = 0.4f)
+    val PillFade = springFor(0.22f, 1f, threshold = 0.002f)
+    val Press = springFor(0.20f, 0.90f, threshold = 0.0005f)
+    val Release = springFor(0.35f, 0.60f, threshold = 0.0005f)
+    const val ContentDelayMillis = 230
+    const val ContentEnterMillis = 150
+    const val ContentExitMillis = 80
+    const val PillRegrowDelayMillis = 420
+    val CardCornerRadius = 28.dp
+    val ButtonDown = Easing { value -> 1f - (1f - value) * (1f - value) * (1f - value) }
+    val ButtonUp = Easing { value -> 1f - kotlin.math.cos(value * PI.toFloat() * 1.6f) * (1f - value) * (1f - value) }
+    val EaseInOut = Easing { value ->
+        if (value < 0.5f) 4f * value * value * value
+        else 1f - (-2f * value + 2f).let { it * it * it } / 2f
+    }
+    fun contentReveal(expansion: Float): Float = ((expansion - 0.85f) / 0.15f).coerceIn(0f, 1f)
+}
+
+internal class IslandMotionSpring(initialValue: Float) {
+    private val animation = Animatable(initialValue)
+    private var retainedVelocity = 0f
+    val value: Float get() = animation.value
+    suspend fun animateTo(targetValue: Float, animationSpec: SpringSpec<Float>) {
+        animation.animateTo(targetValue, animationSpec, initialVelocity = retainedVelocity) {
+            retainedVelocity = velocity
+        }
+        retainedVelocity = 0f
+    }
+}
+
+internal val LocalIslandPopupRevealMillis = compositionLocalOf<Float?> { null }
+internal val LocalIslandPopupContentOnly = compositionLocalOf { false }
+
+@Composable
+internal fun rememberIslandPressScale(isPressed: Boolean): State<Float> =
+    androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isPressed) 0.94f else 1f,
+        animationSpec = if (isPressed) DynamicIslandMotion.Press else DynamicIslandMotion.Release,
+        label = "island_press",
+    )
+
+@Composable
+internal fun islandRestDiameterPx(): Float? {
+    val view = LocalView.current
+    val top = (view.rootWindowInsets?.displayCutout ?: view.display?.cutout)
+        ?.getBoundingRectTop()?.takeUnless { it.isEmpty } ?: return null
+    return minOf(top.width(), top.height()) * 0.92f
+}
+
+@Composable
+internal fun Modifier.islandPopupRow(index: Int): Modifier {
+    val elapsed = LocalIslandPopupRevealMillis.current ?: return this
+    val progress = ((elapsed - index * 30f) / 200f).coerceIn(0f, 1f)
+    val shift = with(LocalDensity.current) { 8.dp.toPx() }
+    return graphicsLayer { alpha = progress; translationY = (1f - progress) * shift }
 }

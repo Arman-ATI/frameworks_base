@@ -108,8 +108,10 @@ fun StatusBarPopup(
     cos: Boolean = false,
     /** Every live activity as a stack of cards, when the island opened as one. */
     stackedChips: List<QuickActionChipModel.PopupChip>? = null,
+    onHidden: () -> Unit = {},
 ) {
     val stacked = stackedChips != null
+    val useIslandMorph = sideEdge == null && !cos && !stacked
     val density = Density(LocalContext.current)
     val yOffsetPx =
         with(density) {
@@ -127,6 +129,7 @@ fun StatusBarPopup(
             anchorCenterX,
             sideGapPx,
             sideMarginPx,
+            useIslandMorph,
         ) {
             object : PopupPositionProvider {
                 override fun calculatePosition(
@@ -167,10 +170,12 @@ fun StatusBarPopup(
                         } else {
                             (anchorBounds.center.x - popupContentSize.width / 2).coerceIn(0, maxX)
                         }
-                    return IntOffset(x, anchorBounds.top + yOffsetPx)
+                    return if (useIslandMorph) IntOffset.Zero
+                    else IntOffset(x, anchorBounds.top + yOffsetPx)
                 }
             }
         }
+
     // Direction the popup slides in from. Top camera: down from the status bar. Side camera:
     // out from the edge the pill sits on.
     val slideInPx = with(density) { 24.dp.toPx() }
@@ -197,12 +202,29 @@ fun StatusBarPopup(
                 // Keep Back dismissal without taking IME focus from the app below the popup.
                 flags =
                     WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
-                        WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM,
+                        WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM or
+                        (if (useIslandMorph) {
+                            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                        } else 0),
                 dismissOnBackPress = true,
                 dismissOnClickOutside = true,
             ),
     ) {
         val popupView = LocalView.current
+        if (useIslandMorph) {
+            val topInsetPx =
+                LocalContext.current.resources
+                    .getDimensionPixelSize(R.dimen.status_bar_height) + with(density) { 8.dp.roundToPx() }
+            IslandPopupMorph(
+                isVisible = isVisible,
+                chipBoundsInScreen = chipBoundsInScreen,
+                topInsetPx = topInsetPx,
+                onDismissRequest = { viewModel.hidePopup() },
+                onHidden = onHidden,
+                content = { IslandPopupContent(viewModel) },
+            )
+            return@Popup
+        }
         var popupBoundsInScreen by remember { mutableStateOf<Rect?>(null) }
 
         val transformOrigin by remember {
@@ -225,15 +247,15 @@ fun StatusBarPopup(
                             }
                         TransformOrigin(pivotX, pivotY)
                     } else {
-                    val pivotX =
-                        ((chip.center.x - popup.left) / popup.width).coerceIn(0.05f, 0.95f)
-                    val pivotY =
-                        if (popup.height > 0f) {
-                            ((chip.center.y - popup.top) / popup.height).coerceIn(0f, 0.3f)
-                        } else {
-                            0f
-                        }
-                    TransformOrigin(pivotX, pivotY)
+                        val pivotX =
+                            ((chip.center.x - popup.left) / popup.width).coerceIn(0.05f, 0.95f)
+                        val pivotY =
+                            if (popup.height > 0f) {
+                                ((chip.center.y - popup.top) / popup.height).coerceIn(0f, 0.3f)
+                            } else {
+                                0f
+                            }
+                        TransformOrigin(pivotX, pivotY)
                     }
                 }
             }
@@ -392,32 +414,32 @@ fun StatusBarPopup(
                         launch { alpha.animateTo(0f, animationSpec = tween(120)) }
                     }
                 } else {
-                coroutineScope {
-                    launch {
-                        scaleX.animateTo(
-                            targetValue = initialScaleFromChip.x,
-                            animationSpec = DynamicIslandMotion.CloseWidth,
-                        )
-                    }
-                    launch {
-                        scaleY.animateTo(
-                            targetValue = initialScaleFromChip.y,
-                            animationSpec = DynamicIslandMotion.CloseHeight,
-                        )
-                    }
-                    launch {
-                        translationX.animateTo(
-                            targetValue = exitOffset.x,
-                            animationSpec = DynamicIslandMotion.ClosePosition,
-                        )
-                    }
-                    launch {
-                        translationY.animateTo(
-                            targetValue = exitOffset.y,
-                            animationSpec = DynamicIslandMotion.ClosePosition,
-                        )
-                    }
-                    launch { alpha.animateTo(0f, animationSpec = tween(160)) }
+                    coroutineScope {
+                        launch {
+                            scaleX.animateTo(
+                                targetValue = initialScaleFromChip.x,
+                                animationSpec = DynamicIslandMotion.CloseWidth,
+                            )
+                        }
+                        launch {
+                            scaleY.animateTo(
+                                targetValue = initialScaleFromChip.y,
+                                animationSpec = DynamicIslandMotion.CloseHeight,
+                            )
+                        }
+                        launch {
+                            translationX.animateTo(
+                                targetValue = exitOffset.x,
+                                animationSpec = DynamicIslandMotion.ClosePosition,
+                            )
+                        }
+                        launch {
+                            translationY.animateTo(
+                                targetValue = exitOffset.y,
+                                animationSpec = DynamicIslandMotion.ClosePosition,
+                            )
+                        }
+                        launch { alpha.animateTo(0f, animationSpec = tween(160)) }
                     }
                 }
             }
@@ -505,16 +527,15 @@ fun StatusBarPopup(
                                 Modifier
                             }
                         )
-                ) {
-                    if (stackedChips != null) {
-                        IslandCardStack(
-                            chips = stackedChips,
-                            isVisible = isVisible,
-                            onTopCardHeight = { stackTopCardHeight = it },
-                        )
-                    } else {
-                        IslandPopupContent(viewModel)
-                    }
+            ) {
+                if (stackedChips != null) {
+                    IslandCardStack(
+                        chips = stackedChips,
+                        isVisible = isVisible,
+                        onTopCardHeight = { stackTopCardHeight = it },
+                    )
+                } else {
+                    IslandPopupContent(viewModel)
                 }
             }
         }

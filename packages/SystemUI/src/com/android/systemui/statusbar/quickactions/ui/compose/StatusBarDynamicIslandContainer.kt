@@ -148,9 +148,11 @@ fun StatusBarDynamicIslandContainer(
             popupVisible = true
         } else if (popupAnchorChip != null) {
             popupVisible = false
-            delay(if (cos) CosCardCloseMillis + 20L else 220L)
-            popupAnchorChip = null
-            stacked = false
+            if (cos) {
+                delay(CosCardCloseMillis + 20L)
+                popupAnchorChip = null
+                stacked = false
+            }
         }
     }
 
@@ -365,7 +367,7 @@ fun StatusBarDynamicIslandContainer(
             }
         }
 
-        popupAnchorChip?.takeIf { cos || selectedChip != null }?.let { anchoredChip ->
+        popupAnchorChip?.let { anchoredChip ->
             StatusBarPopup(
                 viewModel = anchoredChip,
                 isVisible = popupVisible,
@@ -374,6 +376,12 @@ fun StatusBarDynamicIslandContainer(
                 sideEdge = sideEdge,
                 cos = cos,
                 stackedChips = if (stacked) stackChips else null,
+                onHidden = {
+                    if (shownChip == null && !cos) {
+                        popupAnchorChip = null
+                        stacked = false
+                    }
+                },
             )
         }
     }

@@ -569,6 +569,7 @@ constructor(
             getBgColor(),
         )
         iconManager.setTint(getFgColor(), getBgColor())
+        iconContainer.setNetworkTrafficColor(getFgColor())
     }
 
     private fun updateCarrierGroupPadding() {

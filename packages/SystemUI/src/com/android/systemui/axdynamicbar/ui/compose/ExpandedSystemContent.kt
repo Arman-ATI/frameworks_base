@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BluetoothDisabled
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Vibration
@@ -41,6 +42,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.android.systemui.axdynamicbar.shared.IslandActions
 import com.android.systemui.axdynamicbar.model.IslandEvent
@@ -90,10 +92,20 @@ internal fun BluetoothExpanded(event: IslandEvent.Bluetooth, interactor: IslandA
     val earbuds =
         listOfNotNull(
             event.leftBatteryLevel?.let {
-                BudBattery(R.string.ax_dynamic_bar_left_earbud, it, mirror = false)
+                BudBattery(
+                    R.string.ax_dynamic_bar_left_earbud,
+                    it,
+                    mirror = false,
+                    charging = event.leftCharging,
+                )
             },
             event.rightBatteryLevel?.let {
-                BudBattery(R.string.ax_dynamic_bar_right_earbud, it, mirror = true)
+                BudBattery(
+                    R.string.ax_dynamic_bar_right_earbud,
+                    it,
+                    mirror = true,
+                    charging = event.rightCharging,
+                )
             },
         )
     val showSingleBattery = earbuds.isEmpty() && event.caseBatteryLevel == null
@@ -157,6 +169,7 @@ internal fun BluetoothExpanded(event: IslandEvent.Bluetooth, interactor: IslandA
                         style = MaterialTheme.typography.labelSmall,
                         maxLines = 1,
                     )
+                    if (event.caseCharging) ChargingBolt(IslandTone.POSITIVE.tint, size = 12.dp)
                     Text(
                         "$level%",
                         color = if (level > 20) IslandTone.POSITIVE.tint else IslandTone.ALERT.tint,
@@ -187,7 +200,22 @@ internal fun BluetoothExpanded(event: IslandEvent.Bluetooth, interactor: IslandA
     )
 }
 
-private data class BudBattery(val labelRes: Int, val level: Int, val mirror: Boolean)
+private data class BudBattery(
+    val labelRes: Int,
+    val level: Int,
+    val mirror: Boolean,
+    val charging: Boolean,
+)
+
+@Composable
+private fun ChargingBolt(tint: Color, size: Dp) {
+    Icon(
+        imageVector = Icons.Filled.Bolt,
+        contentDescription = stringResource(R.string.ax_dynamic_bar_charging),
+        tint = tint,
+        modifier = Modifier.size(size),
+    )
+}
 
 @Composable
 private fun BluetoothEarbudBatteries(batteries: List<BudBattery>) {
@@ -223,13 +251,19 @@ private fun BluetoothEarbudBatteries(batteries: List<BudBattery>) {
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Text(
-                        text = "${battery.level}%",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (battery.level > 20) IslandTone.POSITIVE.tint else IslandTone.ALERT.tint,
-                        maxLines = 1,
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (battery.charging) ChargingBolt(IslandTone.POSITIVE.tint, size = 16.dp)
+                        Text(
+                            text = "${battery.level}%",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (battery.level > 20) IslandTone.POSITIVE.tint else IslandTone.ALERT.tint,
+                            maxLines = 1,
+                        )
+                    }
                 }
             }
         }

@@ -22,10 +22,7 @@ import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.view.ViewGroup
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -116,15 +113,9 @@ fun PopupSurface(
     val body: @Composable () -> Unit = {
         Box(Modifier.padding(top = cameraClearance)) { content() }
     }
-    // A popup that reaches up around the camera must be solid there, or the lens area shows
-    // through. A blurred one only gets a solid strip over the camera and stays blurred below it.
-    val mode =
-        if (cameraClearance > 0.dp && colorMode != POPUP_COLOR_MODE_BLUR) {
-            POPUP_COLOR_MODE_SOLID_BLACK
-        } else {
-            colorMode
-        }
-    when (mode) {
+    // Every background runs all the way up around the camera; the content is only pushed down by
+    // the clearance so it stays off the lens.
+    when (colorMode) {
         POPUP_COLOR_MODE_BLUR -> {
             val density = LocalDensity.current
             Box(
@@ -149,16 +140,7 @@ fun PopupSurface(
                 CompositionLocalProvider(
                     LocalContentColor provides MaterialTheme.colorScheme.onSurface
                 ) {
-                    Box(Modifier.clip(shape)) {
-                        body()
-                        if (cameraClearance > 0.dp) {
-                            Box(
-                                Modifier.fillMaxWidth()
-                                    .height(cameraClearance)
-                                    .background(Color.Black)
-                            )
-                        }
-                    }
+                    body()
                 }
             }
         }

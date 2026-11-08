@@ -30,6 +30,7 @@ import android.os.UserHandle
 import android.provider.Settings
 import com.android.internal.graphics.ColorUtils
 import com.android.internal.graphics.cam.Cam
+import com.android.systemui.common.shared.colors.SurfaceEffectColors
 import com.android.systemui.res.R
 import kotlin.math.max
 import kotlin.math.min
@@ -132,6 +133,17 @@ object ShadeColors {
             Style.TINTED -> hct(context, spec(Style.TINTED, night)!!, 32f,
                 if (night) 60f else 99f, if (night) 0.22f else 0.6f)
         }
+    }
+
+    /**
+     * Opaque surface for notification rows and their footer when the shade cannot blur: the QS
+     * tile surface over the opaque panel, so the cards read as the same colour as the tiles.
+     */
+    @JvmStatic
+    fun fallbackCardSurface(context: Context): Int {
+        val s = spec(style(context), isNight(context))
+        val panel = if (s != null) fallbackPanel(context, s) else shadePanelFallback(context)
+        return ColorUtils.compositeColors(SurfaceEffectColors.surfaceEffect1(context), panel)
     }
 
     private fun fallbackPanel(context: Context, s: Spec): Int =

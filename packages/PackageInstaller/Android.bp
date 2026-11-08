@@ -66,7 +66,7 @@ java_defaults {
         "com.google.android.material_material",
         "kotlin-parcelize-runtime",
     ],
-    min_sdk_version: "36",
+    min_sdk_version: "37",
     lint: {
         error_checks: ["Recycle"],
     },

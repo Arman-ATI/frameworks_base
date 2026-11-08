@@ -107,8 +107,6 @@ fun IslandGlassCard(
             Column(
                 modifier =
                     Modifier.fillMaxWidth()
-                        // Keep the content off the camera lens; the glass runs up around it.
-                        .padding(top = LocalPopupCameraClearance.current)
                         .padding(horizontal = 20.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {

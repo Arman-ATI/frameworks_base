@@ -16,16 +16,23 @@
 
 package com.android.systemui.statusbar.quickactions.popups.ui.viewmodel
 
+import android.app.Notification
+import android.app.PendingIntent
+import android.app.Person
 import android.content.Context
 import android.provider.Settings
 import androidx.compose.runtime.getValue
-import com.android.systemui.axdynamicbar.data.source.ConnectivityIslandManager
-import com.android.systemui.axdynamicbar.data.source.NotificationIslandManager
-import com.android.systemui.axdynamicbar.model.IslandEvent
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.lifecycle.HydratedActivatable
+import com.android.systemui.statusbar.notification.collection.notifcollection.CommonNotifCollection
+import com.android.systemui.statusbar.notification.domain.interactor.ActiveNotificationsInteractor
+import com.android.systemui.statusbar.notification.shared.ActiveNotificationModel
+import com.android.systemui.statusbar.notification.shared.CallType
+import com.android.systemui.statusbar.quickactions.popups.data.SystemEventConnectivityManager
 import com.android.systemui.statusbar.quickactions.popups.shared.DynamicIslandFeatureSettings
 import com.android.systemui.statusbar.quickactions.popups.shared.SystemEventFeature
+import com.android.systemui.statusbar.quickactions.popups.shared.model.CallControls
+import com.android.systemui.statusbar.quickactions.popups.shared.model.SystemEvent
 import com.android.systemui.statusbar.quickactions.shared.model.QuickActionChipModel
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -39,23 +46,28 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /**
  * Runs its own session of the island event sources while the dynamic island is enabled and exposes
- * their events as island chips, each behind its own [SystemEventFeature] switch.
- * [ConnectivityIslandManager] is not a singleton, so this session never shares listeners or state
- * with the Ax dynamic bar.
+ * its system events as island chips, each behind its own [SystemEventFeature] switch.
  */
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class SystemEventPopupChipsViewModel
 @AssistedInject
 constructor(
     @Application private val context: Context,
-    private val connectivityProvider: Provider<ConnectivityIslandManager>,
-    private val notificationProvider: Provider<NotificationIslandManager>,
+    private val connectivityProvider: Provider<SystemEventConnectivityManager>,
+    activeNotificationsInteractor: ActiveNotificationsInteractor,
+    private val notifCollection: CommonNotifCollection,
     private val mapper: SystemEventPopupMapper,
 ) : HydratedActivatable() {
+
+    private val callEvents: Flow<List<SystemEvent.Call>> =
+        activeNotificationsInteractor.allRepresentativeNotifications.map { notifications ->
+            notifications.values.mapNotNull { it.toIslandCall() }
+        }
 
     val chips: List<QuickActionChipModel.PopupChip> by
         DynamicIslandFeatureSettings.observeDynamicIslandFeatureEnabled(
@@ -85,25 +97,24 @@ constructor(
 
     private fun connectivityChips(): Flow<List<QuickActionChipModel.PopupChip>> = channelFlow {
         val connectivity = connectivityProvider.get()
-        val notifications = notificationProvider.get()
         // The source keeps the event for as long as the device stays connected, so each
         // connection is shown for a short while rather than for as long as it lasts.
         val bluetooth =
-            BriefEvent<IslandEvent.Bluetooth>(
+            BriefEvent<SystemEvent.Bluetooth>(
                 scope = this,
                 durationMs = BLUETOOTH_CHIP_MS,
                 keyOf = { it.address },
                 clear = connectivity::clearBluetooth,
             )
         val hotspot =
-            BriefEvent<IslandEvent.Hotspot>(
+            BriefEvent<SystemEvent.Hotspot>(
                 scope = this,
                 durationMs = HOTSPOT_CHIP_MS,
                 keyOf = { it.id },
                 clear = connectivity::clearHotspot,
             )
         val vpn =
-            BriefEvent<IslandEvent.Vpn>(
+            BriefEvent<SystemEvent.Vpn>(
                 scope = this,
                 durationMs = VPN_CHIP_MS,
                 keyOf = { it.id },
@@ -118,18 +129,13 @@ constructor(
                     else connectivity.stopHotspot()
                     if (SystemEventFeature.VPN in enabled) connectivity.startVpn()
                     else connectivity.stopVpn()
-                    if (SystemEventFeature.CALLS in enabled) {
-                        notifications.startListening(this@SystemEventPopupChipsViewModel)
-                    } else {
-                        notifications.stopListening(this@SystemEventPopupChipsViewModel)
-                    }
                 }
             }
             combine(
                     connectivity.bluetoothEvent,
                     connectivity.hotspotEvent,
                     connectivity.vpnEvent,
-                    notifications.callEvents,
+                    callEvents,
                     enabledFeatures(),
                 ) { bluetoothEvent, hotspotEvent, vpnEvent, calls, enabled ->
                     Events(
@@ -160,16 +166,57 @@ constructor(
             connectivity.stopBluetooth()
             connectivity.stopHotspot()
             connectivity.stopVpn()
-            notifications.stopListening(this@SystemEventPopupChipsViewModel)
         }
     }
 
     private data class Events(
-        val bluetooth: IslandEvent.Bluetooth?,
-        val hotspot: IslandEvent.Hotspot?,
-        val vpn: IslandEvent.Vpn?,
-        val calls: List<IslandEvent.Call>,
+        val bluetooth: SystemEvent.Bluetooth?,
+        val hotspot: SystemEvent.Hotspot?,
+        val vpn: SystemEvent.Vpn?,
+        val calls: List<SystemEvent.Call>,
     )
+
+    private fun ActiveNotificationModel.toIslandCall(): SystemEvent.Call? {
+        if (callType == CallType.None) return null
+        val sbn = notifCollection.getEntry(key)?.sbn ?: return null
+        val notification = sbn.notification
+        val person =
+            notification.extras.getParcelable(Notification.EXTRA_CALL_PERSON, Person::class.java)
+        return SystemEvent.Call(
+            id = sbn.key,
+            callerName = person?.name,
+            callerPhoto = person?.icon?.loadDrawable(context),
+            connected = callType == CallType.Ongoing,
+            callType =
+                if (callType == CallType.Incoming) "Phone:incoming" else "Phone:ongoing",
+            callStartTimeMs = notification.`when`,
+            actions = notification.actions?.toList().orEmpty(),
+            ownerPackage = sbn.packageName,
+            controls = notification.toCallControls(),
+        )
+    }
+
+    private fun Notification.toCallControls(): CallControls {
+        fun pi(key: String) = extras.getParcelable(key, PendingIntent::class.java)
+        val all = actions?.toList().orEmpty()
+        val muteAction =
+            all.firstOrNull {
+                it.semanticAction == Notification.Action.SEMANTIC_ACTION_MUTE ||
+                    it.semanticAction == Notification.Action.SEMANTIC_ACTION_UNMUTE
+            }
+        val speakerAction =
+            all.firstOrNull { it.title?.contains("speaker", ignoreCase = true) == true }
+        return CallControls(
+            answer = pi(Notification.EXTRA_ANSWER_INTENT),
+            decline = pi(Notification.EXTRA_DECLINE_INTENT),
+            hangUp = pi(Notification.EXTRA_HANG_UP_INTENT),
+            speaker = speakerAction?.actionIntent,
+            speakerOn = null,
+            mute = muteAction?.actionIntent,
+            muted =
+                muteAction?.let { it.semanticAction == Notification.Action.SEMANTIC_ACTION_UNMUTE },
+        )
+    }
 
     /**
      * Clears an event [durationMs] after it first shows up, and again for every later event whose
@@ -191,7 +238,6 @@ constructor(
                 return
             }
             val key = keyOf(event)
-            if (key == shownKey) return
             shownKey = key
             expiry?.cancel()
             expiry =

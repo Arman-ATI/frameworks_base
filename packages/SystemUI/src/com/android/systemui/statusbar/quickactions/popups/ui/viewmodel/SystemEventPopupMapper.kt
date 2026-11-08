@@ -19,7 +19,6 @@ package com.android.systemui.statusbar.quickactions.popups.ui.viewmodel
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
-import com.android.systemui.axdynamicbar.model.IslandEvent
 import com.android.systemui.common.shared.model.ContentDescription
 import com.android.systemui.common.shared.model.Icon
 import com.android.systemui.dagger.qualifiers.Application
@@ -28,6 +27,7 @@ import com.android.systemui.res.R
 import com.android.systemui.statusbar.quickactions.popups.shared.model.BluetoothBatteryComponent
 import com.android.systemui.statusbar.quickactions.popups.shared.model.BluetoothBatteryModel
 import com.android.systemui.statusbar.quickactions.popups.shared.model.PopupActionModel
+import com.android.systemui.statusbar.quickactions.popups.shared.model.SystemEvent
 import com.android.systemui.statusbar.quickactions.popups.shared.toSendAction
 import com.android.systemui.statusbar.quickactions.popups.shared.model.SystemEventKind
 import com.android.systemui.statusbar.quickactions.shared.model.CallPopupModel
@@ -51,7 +51,7 @@ constructor(
      * The hotspot while it is on. The chip carries the hotspot glyph and the number of connected
      * devices; the popup adds a button that opens the tethering settings.
      */
-    fun toChip(event: IslandEvent.Hotspot): QuickActionChipModel.PopupChip =
+    fun toChip(event: SystemEvent.Hotspot): QuickActionChipModel.PopupChip =
         settingsChip(
             event = event,
             kind = SystemEventKind.Hotspot,
@@ -70,7 +70,7 @@ constructor(
      * A VPN connection. The chip carries the VPN glyph; the popup tells whether the connection is
      * up yet and adds a button that opens the VPN settings.
      */
-    fun toChip(event: IslandEvent.Vpn): QuickActionChipModel.PopupChip =
+    fun toChip(event: SystemEvent.Vpn): QuickActionChipModel.PopupChip =
         settingsChip(
             event = event,
             kind = SystemEventKind.Vpn,
@@ -85,21 +85,17 @@ constructor(
             settingsAction = Settings.ACTION_VPN_SETTINGS,
         )
 
-    /**
-     * A call. The chip carries the call glyph; the popup shows who is calling, whether the call is
-     * ringing, dialling or connected (with a running timer) and the notification's own actions,
-     * such as answer and decline.
-     */
-    fun toChip(event: IslandEvent.Call): QuickActionChipModel.PopupChip {
+    /** A CallStyle notification surfaced by the base notification pipeline. */
+    fun toChip(event: SystemEvent.Call): QuickActionChipModel.PopupChip {
         val title =
             event.callerName?.toString()?.takeIf { it.isNotBlank() }
                 ?: context.getString(R.string.dynamic_island_event_call)
         val text =
-            when {
-                event.connected -> event.number?.toString().orEmpty()
-                event.callType == "Phone:incoming" ->
-                    context.getString(R.string.dynamic_island_event_incoming_call)
-                else -> context.getString(R.string.dynamic_island_event_calling)
+            if (event.connected) ""
+            else if (event.callType == "Phone:incoming") {
+                context.getString(R.string.dynamic_island_event_incoming_call)
+            } else {
+                context.getString(R.string.dynamic_island_event_calling)
             }
         val icon = Icon.Resource(R.drawable.ic_call, null)
         val controls = event.controls
@@ -127,24 +123,28 @@ constructor(
                     title = title,
                     text = text,
                     actions =
-                        event.actions.map { action ->
-                            PopupActionModel(
-                                label = action.label.toString(),
-                                onClick = action.action.actionIntent.toSendAction() ?: {},
-                            )
+                        event.actions.mapNotNull { action ->
+                            val label = action.title?.toString()?.takeIf { it.isNotBlank() }
+                            val send = action.actionIntent.toSendAction()
+                            if (label == null || send == null) null else PopupActionModel(label, send)
                         },
                     icon = icon,
                     image = event.callerPhoto?.let { Icon.Loaded(it, null) },
                     callStartTimeMs = event.callStartTimeMs.takeIf { event.connected },
                     isRinging = event.callType == "Phone:incoming",
-                    ownerPackage = event.sbn.packageName,
+                    ownerPackage = event.ownerPackage,
                     call = call,
                 ),
         )
     }
 
+    /**
+     * A call. The chip carries the call glyph; the popup shows who is calling, whether the call is
+     * ringing, dialling or connected (with a running timer) and the notification's own actions,
+     * such as answer and decline.
+     */
     private fun settingsChip(
-        event: IslandEvent,
+        event: SystemEvent,
         kind: SystemEventKind,
         iconRes: Int,
         title: String,
@@ -188,7 +188,7 @@ constructor(
      * reports one, its Fast Pair artwork; the popup adds the battery levels and a Disconnect action.
      */
     fun toChip(
-        event: IslandEvent.Bluetooth,
+        event: SystemEvent.Bluetooth,
         disconnect: (String) -> Unit,
     ): QuickActionChipModel.PopupChip {
         val earbudBatteries =

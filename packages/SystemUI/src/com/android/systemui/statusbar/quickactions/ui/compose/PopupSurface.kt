@@ -23,14 +23,12 @@ import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -109,12 +107,6 @@ fun PopupSurface(
     colorMode: Int = rememberPopupColorMode(),
     content: @Composable () -> Unit,
 ) {
-    val cameraClearance = LocalPopupCameraClearance.current
-    val body: @Composable () -> Unit = {
-        Box(Modifier.padding(top = cameraClearance)) { content() }
-    }
-    // Every background runs all the way up around the camera; the content is only pushed down by
-    // the clearance so it stays off the lens.
     when (colorMode) {
         POPUP_COLOR_MODE_BLUR -> {
             val density = LocalDensity.current
@@ -140,7 +132,7 @@ fun PopupSurface(
                 CompositionLocalProvider(
                     LocalContentColor provides MaterialTheme.colorScheme.onSurface
                 ) {
-                    body()
+                    content()
                 }
             }
         }
@@ -152,7 +144,7 @@ fun PopupSurface(
                 shadowElevation = shadowElevation,
                 modifier = modifier,
             ) {
-                body()
+                content()
             }
         }
         else -> {
@@ -163,11 +155,8 @@ fun PopupSurface(
                 shadowElevation = shadowElevation,
                 modifier = modifier,
             ) {
-                body()
+                content()
             }
         }
     }
 }
-
-/** Height of camera cutout the popup content has to stay clear of at its top edge. */
-val LocalPopupCameraClearance = compositionLocalOf { 0.dp }

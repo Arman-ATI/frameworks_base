@@ -52,6 +52,7 @@ import com.android.systemui.Gefingerpoken;
 import com.android.systemui.common.shared.colors.SurfaceEffectColors;
 import com.android.systemui.res.R;
 import com.android.systemui.shade.TouchLogger;
+import com.android.systemui.shade.ui.ShadeColors;
 import com.android.systemui.statusbar.NotificationShelf;
 import com.android.systemui.statusbar.notification.FakeShadowView;
 import com.android.systemui.statusbar.notification.NotificationUtils;
@@ -171,8 +172,7 @@ public abstract class ActivatableNotificationView extends ExpandableOutlineView 
             mNormalColor = useAltColor
                     ? SurfaceEffectColors.surfaceEffect2(getContext())
                     : SurfaceEffectColors.surfaceEffect1(getContext());
-            mOpaqueColor = mContext.getColor(
-                    com.android.internal.R.color.materialColorSurfaceContainer);
+            mOpaqueColor = ShadeColors.fallbackCardSurface(getContext());
         } else {
             mNormalColor = mContext.getColor(
                     com.android.internal.R.color.materialColorSurfaceContainerHigh);

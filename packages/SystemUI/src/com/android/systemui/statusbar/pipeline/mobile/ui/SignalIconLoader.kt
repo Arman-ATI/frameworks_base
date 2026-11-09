@@ -30,6 +30,7 @@ import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import com.android.systemui.dagger.SysUISingleton
+import java.util.concurrent.CopyOnWriteArrayList
 import javax.inject.Inject
 
 @SysUISingleton
@@ -43,7 +44,7 @@ class SignalIconLoader @Inject constructor(
     private var iconSize: Int = 0
 
     private val contentResolver: ContentResolver = context.contentResolver
-    private val reloadCallbacks = mutableListOf<() -> Unit>()
+    private val reloadCallbacks = CopyOnWriteArrayList<() -> Unit>()
 
     private var userPreferenceEnabled: Boolean = true
 
@@ -307,6 +308,13 @@ class SignalIconLoader @Inject constructor(
         const val ACTION_RELOAD_MOBILE_ICONS = "com.android.systemui.RELOAD_MOBILE_ICONS"
         const val SETTING_KEY = "signal_icon_use_overlays"
         const val DEFAULT_USE_OVERLAYS = true
+
+        @Volatile private var shared: SignalIconLoader? = null
+        @JvmStatic
+        fun getInstance(context: Context): SignalIconLoader =
+            shared ?: synchronized(this) {
+                shared ?: SignalIconLoader(context.applicationContext).also { shared = it }
+            }
 
         fun hasOverlayIcons(context: Context): Boolean {
             val enabled = try {

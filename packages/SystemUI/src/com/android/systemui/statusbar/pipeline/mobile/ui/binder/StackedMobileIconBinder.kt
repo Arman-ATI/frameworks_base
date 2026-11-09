@@ -97,7 +97,7 @@ object StackedMobileIconBinder {
                                 ) {
                                     // Secondary icon (SIM 2)
                                     viewModel.secondaryIcon?.let { icon ->
-                                        val loader = SignalIconLoader(view.context)
+                                        val loader = SignalIconLoader.getInstance(view.context)
                                         val drawable =
                                             loader.loadSignalIcon(icon.level, icon.numberOfLevels)
                                         drawable?.let {
@@ -111,7 +111,7 @@ object StackedMobileIconBinder {
 
                                     // Primary icon (SIM 1)
                                     viewModel.primaryIcon?.let { icon ->
-                                        val loader = SignalIconLoader(view.context)
+                                        val loader = SignalIconLoader.getInstance(view.context)
                                         val drawable =
                                             loader.loadSignalIcon(icon.level, icon.numberOfLevels)
                                         drawable?.let {

@@ -83,7 +83,7 @@ constructor(
         StatusBarMobileIconKairos.assertInLegacyMode()
     }
 
-    private val signalIconLoader = SignalIconLoader(context)
+    private val signalIconLoader = SignalIconLoader.getInstance(context)
 
     private val iconViewModelFlow: Flow<List<MobileIconViewModelCommon>> =
         combine(

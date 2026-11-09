@@ -58,15 +58,6 @@ data class MobileIconColors(@ColorInt val tint: Int, @ColorInt val contrast: Int
 object MobileIconBinder {
     /** Binds the view to the view-model, continuing to update the former based on the latter */
 
-    private var signalIconLoader: SignalIconLoader? = null
-
-    private fun initSignalIconLoader(context: Context): SignalIconLoader {
-        if (signalIconLoader == null) {
-            signalIconLoader = SignalIconLoader(context)
-        }
-        return signalIconLoader!!
-    }
-
     @JvmStatic
     fun bind(
         view: ViewGroup,
@@ -147,7 +138,7 @@ object MobileIconBinder {
 
                     // Set the icon for the triangle
                     launch {
-                        val loader = initSignalIconLoader(view.context)
+                        val loader = SignalIconLoader.getInstance(view.context)
                         val reloadTrigger = callbackFlow {
                             val callback: () -> Unit = { trySend(Unit) }
                             loader.addReloadCallback(callback)

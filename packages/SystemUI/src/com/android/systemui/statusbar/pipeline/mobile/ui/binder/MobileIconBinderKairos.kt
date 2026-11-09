@@ -55,15 +55,6 @@ import kotlinx.coroutines.launch
 
 object MobileIconBinderKairos {
 
-    private var signalIconLoader: SignalIconLoader? = null
-
-    private fun initSignalIconLoader(context: Context): SignalIconLoader {
-        if (signalIconLoader == null) {
-            signalIconLoader = SignalIconLoader(context)
-        }
-        return signalIconLoader!!
-    }
-
     fun bind(
         subId: Int,
         view: ViewGroup,
@@ -213,7 +204,7 @@ object MobileIconBinderKairos {
             }
 
             // Set the icon for the triangle
-            val loader = initSignalIconLoader(view.context)
+            val loader = SignalIconLoader.getInstance(view.context)
             var currentIcon: SignalIconModel? = null
 
             fun drawIcon(newIcon: SignalIconModel, forceRequestLayout: Boolean) {

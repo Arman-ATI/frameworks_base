@@ -50,7 +50,7 @@ constructor(
 
     private val builder = kairosBuilder()
 
-    private val signalIconLoader = SignalIconLoader(context)
+    private val signalIconLoader = SignalIconLoader.getInstance(context)
 
     private val isStackable: Boolean by
         builder.hydratedComposeStateOf(
